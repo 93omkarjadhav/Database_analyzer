@@ -91,6 +91,7 @@ const getAiResponse = async (prompt, source, filePath) => {
     }
 
     // --- 3. MongoDB Logic (Theory + JSON) ---
+        // --- 3. MongoDB Logic (Theory + JSON + table) ---
     if (source === "MongoDB") {
         const client = new MongoClient(process.env.MONGO_URI);
         await client.connect();
@@ -104,7 +105,7 @@ const getAiResponse = async (prompt, source, filePath) => {
 
         let parsed;
         try {
-            parsed = JSON.parse(res.content.replace(/```json|```/g, "").trim());
+            parsed = JSON.parse(res.content.replace(/|```/g, "").trim());
         } catch (e) {
             await client.close();
             return {
@@ -113,9 +114,19 @@ const getAiResponse = async (prompt, source, filePath) => {
             };
         }
 
-        const result = await db.collection("products").aggregate(parsed.data || []).toArray();
+        const pipeline = parsed.data || [];
+        const result = await db.collection("products").aggregate(pipeline).toArray();
         await client.close();
-        return { role: "assistant", content: parsed.summary, dataframe: result };
+
+        // content  = theory / explanation
+        // dataframe = table in UI
+        // jsonData  = raw JSON docs
+        return {
+            role: "assistant",
+            content: parsed.summary,
+            dataframe: result,
+            jsonData: result,
+        };
     }
 
     // --- 4. File Upload Logic (CSV Analysis) ---
