@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { Send, Plus, Trash2, Layout, Database, FileUp } from 'lucide-react';
+import { Send, Plus, Trash2, Layout, Database, FileUp, Pencil } from 'lucide-react';
 
 const API_BASE =
   process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
@@ -19,6 +19,8 @@ function App() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+const [editingTitle, setEditingTitle] = useState('');
 
   // Load from localStorage on first render
   useEffect(() => {
@@ -80,18 +82,40 @@ function App() {
     });
   };
 
-  const updateSource = (src) => {
-    setSessions((prev) =>
-      prev.map((s) =>
-        s.id === activeId
-          ? {
-              ...s,
-              source: src,
-            }
-          : s,
-      ),
-    );
+  const renameSession = (id) => {
+  if (!editingTitle.trim()) return;
+
+  setSessions((prev) =>
+    prev.map((s) =>
+      s.id === id
+        ? { ...s, title: editingTitle.trim() }
+        : s
+    )
+  );
+
+  setEditingId(null);
+  setEditingTitle('');
+};
+
+const updateSource = (src) => {
+  if (!activeChat) return;
+
+  if (activeChat.source === src) return;
+
+  const newId = Date.now().toString();
+
+  const newSession = {
+    id: newId,
+    title: "New Session",
+    messages: [],
+    source: src,
+    filePath: null,
+    fileName: null,
   };
+
+  setSessions((prev) => [newSession, ...prev]);
+  setActiveId(newId);
+};
 
   const handleFileUpload = async (event) => {
     const file = event.target.files?.[0];
@@ -227,26 +251,52 @@ function App() {
         <div className="mb-4 flex-1 space-y-1 overflow-y-auto pr-1">
           {sessions.map((s) => (
             <div
-              key={s.id}
-              className={`group flex items-center gap-2 rounded-md px-2 py-2 text-xs ${
-                activeId === s.id
-                  ? 'bg-slate-800 text-slate-50'
-                  : 'cursor-pointer text-slate-300 hover:bg-slate-800/70'
-              }`}
-            >
-              <button
-                onClick={() => setActiveId(s.id)}
-                className="flex-1 truncate text-left"
-              >
-                {s.title}
-              </button>
-              <button
-                onClick={() => deleteSession(s.id)}
-                className="opacity-0 transition group-hover:opacity-100"
-              >
-                <Trash2 className="h-3 w-3 text-rose-400 hover:text-rose-300" />
-              </button>
-            </div>
+  key={s.id}
+  className={`group flex items-center gap-2 rounded-md px-2 py-2 text-xs ${
+    activeId === s.id
+      ? 'bg-slate-800 text-slate-50'
+      : 'cursor-pointer text-slate-300 hover:bg-slate-800/70'
+  }`}
+>
+  {editingId === s.id ? (
+    <input
+      autoFocus
+      value={editingTitle}
+      onChange={(e) => setEditingTitle(e.target.value)}
+      onBlur={() => renameSession(s.id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') renameSession(s.id);
+      }}
+      className="flex-1 rounded bg-slate-700 px-2 py-1 text-xs outline-none"
+    />
+  ) : (
+    <button
+      onClick={() => setActiveId(s.id)}
+      className="flex-1 truncate text-left"
+    >
+      {s.title}
+    </button>
+  )}
+
+  {/* Rename Icon */}
+  <button
+    onClick={() => {
+      setEditingId(s.id);
+      setEditingTitle(s.title);
+    }}
+    className="opacity-0 transition group-hover:opacity-100"
+  >
+    <Pencil className="h-3 w-3 text-blue-400 hover:text-blue-300" />
+  </button>
+
+  {/* Delete Icon */}
+  <button
+    onClick={() => deleteSession(s.id)}
+    className="opacity-0 transition group-hover:opacity-100"
+  >
+    <Trash2 className="h-3 w-3 text-rose-400 hover:text-rose-300" />
+  </button>
+</div>
           ))}
         </div>
 
@@ -262,12 +312,12 @@ function App() {
                   key={src}
                   className="flex cursor-pointer items-center rounded-md px-2 py-1.5 text-xs hover:bg-slate-800/80"
                 >
-                  <input
-                    type="radio"
-                    checked={activeChat.source === src}
-                    onChange={() => updateSource(src)}
-                    className="mr-2 h-3 w-3 accent-rose-500"
-                  />
+                <input
+  type="radio"
+  checked={activeChat.source === src}
+  onChange={() => updateSource(src)}
+  className="mr-2 h-3 w-3 accent-rose-500"
+/>
                   <span>{src}</span>
                 </label>
               ))}
@@ -369,7 +419,7 @@ function App() {
                         </tr>
                       </thead>
                       <tbody>
-                        {m.dataframe.slice(0, 10).map((row, ri) => (
+                        {m.dataframe.map((row, ri) => (
                           <tr
                             key={ri}
                             className="border-b border-slate-800/80 last:border-0 hover:bg-slate-800/60"
