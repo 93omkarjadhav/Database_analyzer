@@ -23,7 +23,7 @@ const connectDatabases = async () => {
             ssl: { rejectUnauthorized: false }
         });
         console.log("✅ PostgreSQL Connected");
-
+ 
         // 3. MongoDB (Chat History & Agent)
         await mongoose.connect(process.env.MONGO_URI, {
             dbName: process.env.MONGO_DB_NAME || 'sql_agent',
