@@ -19,11 +19,17 @@ const connectDatabases = async () => {
 
         // 2. PostgreSQL (Aiven Cloud)
         pgPool = new Pool({
-            connectionString: process.env.DB_URL,
-            ssl: { rejectUnauthorized: false }
-        });
-        console.log("✅ PostgreSQL Connected");
- 
+    host: process.env.PGHOST,
+    database: process.env.PGDATABASE,
+    user: process.env.PGUSER,
+    password: process.env.PGPASSWORD,
+    ssl: {
+        rejectUnauthorized: false
+    }
+});
+        //console.log("✅ PostgreSQL Connected");
+ await pgPool.query("SELECT NOW()");
+console.log("Neon connection working properly");
         // 3. MongoDB (Chat History & Agent)
         await mongoose.connect(process.env.MONGO_URI, {
             dbName: process.env.MONGO_DB_NAME || 'sql_agent',
