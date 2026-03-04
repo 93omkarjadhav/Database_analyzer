@@ -2,7 +2,7 @@ const { ChatOpenAI } = require("@langchain/openai");
 const fs = require('fs');
 const csv = require('csv-parser');
 const { MongoClient } = require('mongodb');
-const { getMysqlConn, getPgPool } = require('../config/db');
+const { getMysqlConn, getPgPool,getSqliteDb } = require('../config/db');
 
 const getAiResponse = async (prompt, source, filePath) => {
     const llm = new ChatOpenAI({
@@ -13,7 +13,7 @@ const getAiResponse = async (prompt, source, filePath) => {
 
     const mysqlConn = getMysqlConn();
     const pgPool = getPgPool();
-
+    const sqliteDb = getSqliteDb();
     // --- 1. MySQL Logic (with schema + auto-fix) ---
     if (source === "MySQL Database" && mysqlConn) {
         const [schemaRows] = await mysqlConn.query(`
@@ -245,6 +245,43 @@ Output ONLY valid JSON, e.g. {"summary":"...","rowLimit":5}`;
             content:
                 "Oracle support is not wired yet in this Node backend. Please use MySQL, PostgreSQL, MongoDB, or Upload File for now.",
         };
+    }
+    if (source === "SQLite") {
+        if (!sqliteDb) return { role: "assistant", content: "SQLite database not connected." };
+        
+        return new Promise((resolve, reject) => {
+            // 1. Correctly fetch real table names from sqlite_master
+            sqliteDb.all("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'", async (err, rows) => {
+                if (err) return resolve({ role: "assistant", content: `Schema Error: ${err.message}` });
+                
+                const tableNames = rows.map(r => r.name).join(", ");
+                
+                if (!tableNames) {
+                    return resolve({ role: "assistant", content: "The SQLite database is empty. Please run the seed script." });
+                }
+
+                // 2. Generate the SQL using the actual discovered tables
+                const sqlPrompt = `You are a SQLite expert. 
+                Existing Tables: [${tableNames}]. 
+                User Question: "${prompt}". 
+                Return ONLY the SQLite SQL string. No markdown.`;
+                
+                const sqlRes = await llm.invoke(sqlPrompt);
+                const sql = sqlRes.content.replace(/```sql|```/g, "").trim();
+
+                // 3. Execute the generated query
+                sqliteDb.all(sql, [], (err, data) => {
+                    if (err) {
+                        return resolve({ role: "assistant", content: `Query Error: ${err.message}. SQL tried: \`${sql}\`` });
+                    }
+                    resolve({ 
+                        role: "assistant", 
+                        content: `SQLite Executed: \`${sql}\``, 
+                        dataframe: data 
+                    });
+                });
+            });
+        });
     }
 
     return { role: "assistant", content: "Source not recognized or data missing." };
