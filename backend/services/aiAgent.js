@@ -92,38 +92,94 @@ const getAiResponse = async (prompt, source, filePath) => {
 
     // --- 3. MongoDB Logic (Theory + JSON) ---
         // --- 3. MongoDB Logic (Theory + JSON + table) ---
+    // if (source === "MongoDB") {
+    //     const client = new MongoClient(process.env.MONGO_URI);
+    //     await client.connect();
+    //     const db = client.db(process.env.MONGO_DB_NAME || "sql_agent");
+
+    //     const mongoPrompt = `You are a MongoDB expert. User wants: ${prompt}. 
+    //     Return a JSON object with keys 'summary' (explanation) and 'data' (the aggregation pipeline array).
+    //     Format: {"summary": "...", "data": [{"$match": {...}}]}`;
+
+    //     const res = await llm.invoke(mongoPrompt);
+
+    //     let parsed;
+    //     try {
+    //         parsed = JSON.parse(res.content.replace(/|```/g, "").trim());
+    //     } catch (e) {
+    //         await client.close();
+    //         return {
+    //             role: "assistant",
+    //             content: "Failed to parse MongoDB JSON description from the model.",
+    //         };
+    //     }
+
+    //     const pipeline = parsed.data || [];
+    //     const result = await db.collection("products").aggregate(pipeline).toArray();
+    //     await client.close();
+
+    //     // content  = theory / explanation
+    //     // dataframe = table in UI
+    //     // jsonData  = raw JSON docs
+    //     return {
+    //         role: "assistant",
+    //         content: parsed.summary,
+    //         dataframe: result,
+    //         jsonData: result,
+    //     };
+    // }
+        // --- 3. MongoDB Logic (Theory + JSON + table) ---
     if (source === "MongoDB") {
         const client = new MongoClient(process.env.MONGO_URI);
         await client.connect();
         const db = client.db(process.env.MONGO_DB_NAME || "sql_agent");
 
-        const mongoPrompt = `You are a MongoDB expert. User wants: ${prompt}. 
-        Return a JSON object with keys 'summary' (explanation) and 'data' (the aggregation pipeline array).
-        Format: {"summary": "...", "data": [{"$match": {...}}]}`;
+        const mongoPrompt = `You are a MongoDB expert working over a collection named "products".
+User question: "${prompt}".
+
+1. Design a MongoDB aggregation pipeline that answers the question.
+2. Do NOT include any explanation text outside the JSON.
+3. Return ONLY a single JSON object with EXACTLY these keys:
+   - "summary": a natural-language explanation of the result.
+   - "data": the aggregation pipeline array to run (e.g. [{"$match": {...}}, {"$project": {...}}]).
+
+Valid example:
+{
+  "summary": "Found all products in the Food category.",
+  "data": [
+    { "$match": { "category": "Food" } }
+  ]
+}`;
 
         const res = await llm.invoke(mongoPrompt);
 
         let parsed;
         try {
-            parsed = JSON.parse(res.content.replace(/|```/g, "").trim());
+            // Extract the first {...} block in case the model still adds extra text
+            const raw = res.content.replace(/```/g, "").trim();
+                        const match = raw.match(/\{[\s\S]*\}/);
+            if (!match) {
+                throw new Error("No JSON object found in model output");
+            }
+            parsed = JSON.parse(match[0]);
         } catch (e) {
             await client.close();
             return {
                 role: "assistant",
-                content: "Failed to parse MongoDB JSON description from the model.",
+                content: `Failed to parse MongoDB JSON description from the model. Raw output was:\n\n${res.content}`,
             };
         }
 
-        const pipeline = parsed.data || [];
+        const pipeline = Array.isArray(parsed.data) ? parsed.data : [];
         const result = await db.collection("products").aggregate(pipeline).toArray();
         await client.close();
 
-        // content  = theory / explanation
+        // content  = explanation
         // dataframe = table in UI
         // jsonData  = raw JSON docs
         return {
             role: "assistant",
-            content: parsed.summary,
+            content: parsed.summary || "Query executed on MongoDB.",
             dataframe: result,
             jsonData: result,
         };
