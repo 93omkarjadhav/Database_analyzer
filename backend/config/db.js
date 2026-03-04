@@ -1,11 +1,11 @@
 const { Pool } = require('pg');
 const mysql = require('mysql2/promise');
 const mongoose = require('mongoose');
-
+const sqlite3 = require('sqlite3').verbose();
 // Hold singleton connections so they can be reused across the app
 let mysqlConn;
 let pgPool;
-
+let sqliteDb;
 const connectDatabases = async () => {
     try {
         // 1. MySQL (Workbench)
@@ -27,6 +27,10 @@ const connectDatabases = async () => {
         rejectUnauthorized: false
     }
 });
+     sqliteDb = new sqlite3.Database('./local_store.db', (err) => {
+            if (err) console.error("❌ SQLite Error:", err);
+            else console.log("✅ SQLite (Local File) Connected");
+        });
         //console.log("✅ PostgreSQL Connected");
  await pgPool.query("SELECT NOW()");
 console.log("Neon connection working properly");
@@ -42,9 +46,10 @@ console.log("Neon connection working properly");
 
 const getMysqlConn = () => mysqlConn;
 const getPgPool = () => pgPool;
-
+const getSqliteDb = () => sqliteDb;
 module.exports = {
     connectDatabases,
     getMysqlConn,
-    getPgPool,
+    getPgPool,  
+    getSqliteDb,
 };
