@@ -10,6 +10,7 @@ const DATA_SOURCES = [
   'PostgreSQL',
   'Oracle',
   'MongoDB',
+  'SQLite',
   'Upload File',
 ];
 
