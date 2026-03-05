@@ -1,31 +1,43 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
-import { Send, Plus, Trash2, Layout, Database, FileUp, Pencil } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from "react";
+import axios from "axios";
+import * as XLSX from "xlsx";
+import {
+  Send,
+  Plus,
+  Trash2,
+  Layout,
+  Database,
+  FileUp,
+  Pencil,
+  Download,
+  Maximize2,
+} from "lucide-react";
 
-const API_BASE =
-  process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+const API_BASE = process.env.REACT_APP_API_BASE_URL || "http://localhost:5000";
 
 const DATA_SOURCES = [
-  'MySQL Database',
-  'PostgreSQL',
-  'Oracle',
-  'MongoDB',
-  'SQLite',
-  'Upload File',
+  "MySQL Database",
+  "PostgreSQL",
+  "Oracle",
+  "MongoDB",
+  "SQLite",
+  "Upload File",
 ];
 
 function App() {
   const [sessions, setSessions] = useState([]);
   const [activeId, setActiveId] = useState(null);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState(null);
-const [editingTitle, setEditingTitle] = useState('');
+  const [editingTitle, setEditingTitle] = useState("");
+  const [fullscreenData, setFullscreenData] = useState(null);
+  const [exportMenu, setExportMenu] = useState(null);
 
   // Load from localStorage on first render
   useEffect(() => {
-    const stored = localStorage.getItem('retail-ai-sessions');
+    const stored = localStorage.getItem("retail-ai-sessions");
     if (stored) {
       const parsed = JSON.parse(stored);
       setSessions(parsed);
@@ -35,9 +47,9 @@ const [editingTitle, setEditingTitle] = useState('');
       setSessions([
         {
           id: firstId,
-          title: 'New Session',
+          title: "New Session",
           messages: [],
-          source: 'MySQL Database',
+          source: "MySQL Database",
           filePath: null,
           fileName: null,
         },
@@ -46,10 +58,14 @@ const [editingTitle, setEditingTitle] = useState('');
     }
   }, []);
 
+  const openFullscreen = (data) => {
+    setFullscreenData(data);
+  };
+
   // Persist to localStorage whenever sessions change
   useEffect(() => {
     if (sessions.length) {
-      localStorage.setItem('retail-ai-sessions', JSON.stringify(sessions));
+      localStorage.setItem("retail-ai-sessions", JSON.stringify(sessions));
     }
   }, [sessions]);
 
@@ -62,9 +78,9 @@ const [editingTitle, setEditingTitle] = useState('');
     const newId = Date.now().toString();
     const newSession = {
       id: newId,
-      title: 'New Session',
+      title: "New Session",
       messages: [],
-      source: 'MySQL Database',
+      source: "MySQL Database",
       filePath: null,
       fileName: null,
     };
@@ -83,40 +99,92 @@ const [editingTitle, setEditingTitle] = useState('');
     });
   };
 
-  const renameSession = (id) => {
-  if (!editingTitle.trim()) return;
+  // CSV export
+  const exportCSV = (data) => {
+    if (!data || !Array.isArray(data)) return;
 
-  setSessions((prev) =>
-    prev.map((s) =>
-      s.id === id
-        ? { ...s, title: editingTitle.trim() }
-        : s
-    )
-  );
+    const headers = Object.keys(data[0]).join(",");
+    const rows = data.map((r) => Object.values(r).join(","));
+    const csv = [headers, ...rows].join("\n");
 
-  setEditingId(null);
-  setEditingTitle('');
-};
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
 
-const updateSource = (src) => {
-  if (!activeChat) return;
-
-  if (activeChat.source === src) return;
-
-  const newId = Date.now().toString();
-
-  const newSession = {
-    id: newId,
-    title: "New Session",
-    messages: [],
-    source: src,
-    filePath: null,
-    fileName: null,
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ai-result.csv";
+    a.click();
   };
 
-  setSessions((prev) => [newSession, ...prev]);
-  setActiveId(newId);
-};
+  // Excel export
+  const exportExcel = (data) => {
+    if (!data || !Array.isArray(data)) return;
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Results");
+
+    XLSX.writeFile(workbook, "ai-result.xlsx");
+  };
+
+  // JSON export
+  const exportJSON = (data) => {
+    if (!data) return;
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ai-result.json";
+    a.click();
+  };
+
+  // TEXT export
+  const exportText = (text) => {
+    const blob = new Blob([text], { type: "text/plain" });
+
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ai-response.txt";
+    a.click();
+  };
+  const renameSession = (id) => {
+    if (!editingTitle.trim()) return;
+
+    setSessions((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, title: editingTitle.trim() } : s)),
+    );
+
+    setEditingId(null);
+    setEditingTitle("");
+  };
+
+  const updateSource = (src) => {
+    if (!activeChat) return;
+
+    if (activeChat.source === src) return;
+
+    const newId = Date.now().toString();
+
+    const newSession = {
+      id: newId,
+      title: "New Session",
+      messages: [],
+      source: src,
+      filePath: null,
+      fileName: null,
+    };
+
+    setSessions((prev) => [newSession, ...prev]);
+    setActiveId(newId);
+  };
 
   const handleFileUpload = async (event) => {
     const file = event.target.files?.[0];
@@ -125,10 +193,10 @@ const updateSource = (src) => {
     try {
       setUploading(true);
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
       const res = await axios.post(`${API_BASE}/api/upload`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       setSessions((prev) =>
@@ -138,18 +206,18 @@ const updateSource = (src) => {
                 ...s,
                 filePath: res.data.filePath,
                 fileName: res.data.fileName,
-                source: 'Upload File',
+                source: "Upload File",
               }
             : s,
         ),
       );
     } catch (err) {
-      console.error('Upload error:', err);
-      alert('Failed to upload file. Please try again.');
+      console.error("Upload error:", err);
+      alert("Failed to upload file. Please try again.");
     } finally {
       setUploading(false);
       // Reset input so same file can be re-selected
-      event.target.value = '';
+      event.target.value = "";
     }
   };
 
@@ -157,7 +225,7 @@ const updateSource = (src) => {
     if (!input || loading || !activeChat) return;
     setLoading(true);
 
-    const userMsg = { role: 'user', content: input };
+    const userMsg = { role: "user", content: input };
     const updatedMessages = [...activeChat.messages, userMsg];
 
     // Optimistic UI update
@@ -168,14 +236,14 @@ const updateSource = (src) => {
               ...s,
               messages: updatedMessages,
               title:
-                s.title === 'New Session'
+                s.title === "New Session"
                   ? `${input.slice(0, 25)}...`
                   : s.title,
             }
           : s,
       ),
     );
-    setInput('');
+    setInput("");
 
     try {
       const res = await axios.post(`${API_BASE}/api/chat`, {
@@ -195,8 +263,8 @@ const updateSource = (src) => {
         ),
       );
     } catch (err) {
-      console.error('Chat Error:', err);
-      alert('Something went wrong while contacting the AI agent.');
+      console.error("Chat Error:", err);
+      alert("Something went wrong while contacting the AI agent.");
       setSessions((prev) =>
         prev.map((s) =>
           s.id === activeId
@@ -205,9 +273,9 @@ const updateSource = (src) => {
                 messages: [
                   ...updatedMessages,
                   {
-                    role: 'assistant',
+                    role: "assistant",
                     content:
-                      'There was an error while processing your request. Please try again.',
+                      "There was an error while processing your request. Please try again.",
                   },
                 ],
               }
@@ -252,52 +320,52 @@ const updateSource = (src) => {
         <div className="mb-4 flex-1 space-y-1 overflow-y-auto pr-1">
           {sessions.map((s) => (
             <div
-  key={s.id}
-  className={`group flex items-center gap-2 rounded-md px-2 py-2 text-xs ${
-    activeId === s.id
-      ? 'bg-slate-800 text-slate-50'
-      : 'cursor-pointer text-slate-300 hover:bg-slate-800/70'
-  }`}
->
-  {editingId === s.id ? (
-    <input
-      autoFocus
-      value={editingTitle}
-      onChange={(e) => setEditingTitle(e.target.value)}
-      onBlur={() => renameSession(s.id)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') renameSession(s.id);
-      }}
-      className="flex-1 rounded bg-slate-700 px-2 py-1 text-xs outline-none"
-    />
-  ) : (
-    <button
-      onClick={() => setActiveId(s.id)}
-      className="flex-1 truncate text-left"
-    >
-      {s.title}
-    </button>
-  )}
+              key={s.id}
+              className={`group flex items-center gap-2 rounded-md px-2 py-2 text-xs ${
+                activeId === s.id
+                  ? "bg-slate-800 text-slate-50"
+                  : "cursor-pointer text-slate-300 hover:bg-slate-800/70"
+              }`}
+            >
+              {editingId === s.id ? (
+                <input
+                  autoFocus
+                  value={editingTitle}
+                  onChange={(e) => setEditingTitle(e.target.value)}
+                  onBlur={() => renameSession(s.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") renameSession(s.id);
+                  }}
+                  className="flex-1 rounded bg-slate-700 px-2 py-1 text-xs outline-none"
+                />
+              ) : (
+                <button
+                  onClick={() => setActiveId(s.id)}
+                  className="flex-1 truncate text-left"
+                >
+                  {s.title}
+                </button>
+              )}
 
-  {/* Rename Icon */}
-  <button
-    onClick={() => {
-      setEditingId(s.id);
-      setEditingTitle(s.title);
-    }}
-    className="opacity-0 transition group-hover:opacity-100"
-  >
-    <Pencil className="h-3 w-3 text-blue-400 hover:text-blue-300" />
-  </button>
+              {/* Rename Icon */}
+              <button
+                onClick={() => {
+                  setEditingId(s.id);
+                  setEditingTitle(s.title);
+                }}
+                className="opacity-0 transition group-hover:opacity-100"
+              >
+                <Pencil className="h-3 w-3 text-blue-400 hover:text-blue-300" />
+              </button>
 
-  {/* Delete Icon */}
-  <button
-    onClick={() => deleteSession(s.id)}
-    className="opacity-0 transition group-hover:opacity-100"
-  >
-    <Trash2 className="h-3 w-3 text-rose-400 hover:text-rose-300" />
-  </button>
-</div>
+              {/* Delete Icon */}
+              <button
+                onClick={() => deleteSession(s.id)}
+                className="opacity-0 transition group-hover:opacity-100"
+              >
+                <Trash2 className="h-3 w-3 text-rose-400 hover:text-rose-300" />
+              </button>
+            </div>
           ))}
         </div>
 
@@ -313,12 +381,12 @@ const updateSource = (src) => {
                   key={src}
                   className="flex cursor-pointer items-center rounded-md px-2 py-1.5 text-xs hover:bg-slate-800/80"
                 >
-                <input
-  type="radio"
-  checked={activeChat.source === src}
-  onChange={() => updateSource(src)}
-  className="mr-2 h-3 w-3 accent-rose-500"
-/>
+                  <input
+                    type="radio"
+                    checked={activeChat.source === src}
+                    onChange={() => updateSource(src)}
+                    className="mr-2 h-3 w-3 accent-rose-500"
+                  />
                   <span>{src}</span>
                 </label>
               ))}
@@ -332,9 +400,7 @@ const updateSource = (src) => {
                 Upload File
               </div>
               {uploading && (
-                <span className="text-[10px] text-rose-300">
-                  Uploading...
-                </span>
+                <span className="text-[10px] text-rose-300">Uploading...</span>
               )}
             </div>
             <p className="mb-2 text-[11px] text-slate-400">
@@ -374,10 +440,11 @@ const updateSource = (src) => {
             </div>
           </div>
 
-          {activeChat.source === 'Upload File' && activeChat.fileName && (
+          {activeChat.source === "Upload File" && activeChat.fileName && (
             <div className="mt-3 inline-flex items-center rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-[11px] text-emerald-200">
               <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              Talking with file: <span className="ml-1 font-medium">{activeChat.fileName}</span>
+              Talking with file:{" "}
+              <span className="ml-1 font-medium">{activeChat.fileName}</span>
             </div>
           )}
         </div>
@@ -387,70 +454,158 @@ const updateSource = (src) => {
             <div
               key={i}
               className={`flex ${
-                m.role === 'user' ? 'justify-end' : 'justify-start'
+                m.role === "user" ? "justify-end" : "justify-start"
               }`}
             >
               <div
-                className={`max-w-[85%] rounded-lg border ${
-                  m.role === 'user'
-                    ? 'border-slate-700 bg-slate-900'
-                    : 'border-l-4 border-l-rose-500/80 bg-slate-900/60'
-                } px-4 py-3 shadow-md`}
+                className={`relative max-w-[85%] rounded-lg border ${
+                  m.role === "assistant"
+                    ? "bg-slate-800 border-slate-700"
+                    : "bg-slate-800 border-slate-700"
+                }`}
               >
+                {m.role === "assistant" && (
+                  <div className="absolute right-2 top-2 flex gap-2">
+                    {/* Export Button */}
+                    <div className="relative">
+                      <button
+                        onClick={() =>
+                          setExportMenu(exportMenu === i ? null : i)
+                        }
+                        className="rounded bg-slate-800 p-1 hover:bg-slate-700"
+                      >
+                        <Download className="h-3 w-3 text-slate-300" />
+                      </button>
+
+                      {exportMenu === i && (
+                        <div className="absolute right-0 mt-1 w-32 rounded-md border border-slate-700 bg-slate-900 text-xs">
+                          <button
+                            onClick={() => exportCSV(m.dataframe)}
+                            className="block w-full px-3 py-2 text-left hover:bg-slate-800"
+                          >
+                            CSV
+                          </button>
+                          <button
+                            onClick={() => exportExcel(m.dataframe)}
+                            className="block w-full px-3 py-2 text-left hover:bg-slate-800"
+                          >
+                            EXCEL
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              exportJSON(m.dataframe || m.jsonData)
+                            }
+                            className="block w-full px-3 py-2 text-left hover:bg-slate-800"
+                          >
+                            JSON
+                          </button>
+
+                          <button
+                            onClick={() => exportText(m.content)}
+                            className="block w-full px-3 py-2 text-left hover:bg-slate-800"
+                          >
+                            TEXT
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Fullscreen Button */}
+                    {m.dataframe && (
+                      <button
+                        onClick={() => openFullscreen(m.dataframe)}
+                        className="rounded bg-slate-800 p-1 hover:bg-slate-700"
+                      >
+                        <Maximize2 className="h-3 w-3 text-slate-300" />
+                      </button>
+                    )}
+                  </div>
+                )}
                 <div className="mb-1 text-[11px] font-mono uppercase tracking-[0.18em] text-slate-400">
                   {m.role}
                 </div>
-                <div className="prose prose-invert max-w-none text-sm">
-                  {m.content}
+                <div className="space-y-3 text-sm">
+                  {m.summary && (
+                    <div>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                        Summary
+                      </div>
+                      <p>{m.summary}</p>
+                    </div>
+                  )}
+
+                  {m.query && (
+                    <div>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                        SQL Query
+                      </div>
+                      <pre className="mt-1 overflow-x-auto rounded-md bg-slate-800 p-2 text-xs text-emerald-300">
+                        {m.query}
+                      </pre>
+                    </div>
+                  )}
                 </div>
 
-                {m.dataframe && Array.isArray(m.dataframe) && m.dataframe.length > 0 && (
-                  <div className="mt-3 overflow-x-auto rounded-md border border-slate-700 bg-slate-900/80">
-                    <table className="min-w-full text-left text-[11px] text-slate-100">
-                      <thead className="bg-slate-900/80 text-slate-300">
-                        <tr>
-                          {Object.keys(m.dataframe[0] || {}).map((k) => (
-                            <th
-                              key={k}
-                              className="border-b border-slate-800 px-2 py-1 font-medium"
-                            >
-                              {k}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {m.dataframe.map((row, ri) => (
-                          <tr
-                            key={ri}
-                            className="border-b border-slate-800/80 last:border-0 hover:bg-slate-800/60"
-                          >
-                            {Object.values(row).map((v, ci) => (
-                              <td
-                                key={ci}
-                                className="max-w-[180px] truncate px-2 py-1 align-top"
+                {m.dataframe &&
+                  Array.isArray(m.dataframe) &&
+                  m.dataframe.length > 0 && (
+                    <div className="mt-3 overflow-x-auto rounded-md border border-slate-700 bg-slate-900/80">
+                      <table className="min-w-full text-left text-[11px] text-slate-100">
+                        <thead className="bg-slate-900/80 text-slate-300">
+                          <tr>
+                            {Object.keys(m.dataframe[0] || {}).map((k) => (
+                              <th
+                                key={k}
+                                className="border-b border-slate-800 px-2 py-1 font-medium"
                               >
-                                {typeof v === 'object'
-                                  ? JSON.stringify(v)
-                                  : String(v)}
-                              </td>
+                                {k}
+                              </th>
                             ))}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                                {m.jsonData && Array.isArray(m.jsonData) && m.jsonData.length > 0 && (
-                  <div className="mt-3 rounded-md border border-slate-700 bg-slate-900/80">
-                    <div className="border-b border-slate-800 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
-                      Raw JSON
+                        </thead>
+                        <tbody>
+                          {m.dataframe.map((row, ri) => (
+                            <tr
+                              key={ri}
+                              className="border-b border-slate-800/80 last:border-0 hover:bg-slate-800/60"
+                            >
+                              {Object.values(row).map((v, ci) => (
+                                <td
+                                  key={ci}
+                                  className="max-w-[180px] truncate px-2 py-1 align-top"
+                                >
+                                  {typeof v === "object"
+                                    ? JSON.stringify(v)
+                                    : String(v)}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {m.insights && (
+                        <div className="mt-3 rounded-md border border-slate-700 bg-slate-900/80 p-3">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 mb-1">
+                            Insights
+                          </div>
+                          <p className="text-sm">{m.insights}</p>
+                        </div>
+                      )}
                     </div>
-                    <pre className="max-h-64 overflow-auto px-3 py-2 text-[11px] leading-snug text-slate-100">
-                      {JSON.stringify(m.jsonData, null, 2)}
-                    </pre>
-                  </div>
-                )}
+                  )}
+                {m.jsonData &&
+                  Array.isArray(m.jsonData) &&
+                  m.jsonData.length > 0 && (
+                    <div className="mt-3 rounded-md border border-slate-700 bg-slate-900/80">
+                      <div className="border-b border-slate-800 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
+                        Raw JSON
+                      </div>
+                      <pre className="max-h-64 overflow-auto px-3 py-2 text-[11px] leading-snug text-slate-100">
+                        {JSON.stringify(m.jsonData, null, 2)}
+                      </pre>
+                    </div>
+                  )}
               </div>
             </div>
           ))}
@@ -469,14 +624,14 @@ const updateSource = (src) => {
               rows={1}
               className="max-h-32 flex-1 resize-none rounded-xl border border-slate-700 bg-slate-900/90 px-4 py-3 text-sm text-slate-50 placeholder:text-slate-500 focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
               placeholder={
-                activeChat.source === 'Upload File'
-                  ? 'Ask anything about your uploaded CSV...'
-                  : 'Ask a question about your retail data...'
+                activeChat.source === "Upload File"
+                  ? "Ask anything about your uploaded CSV..."
+                  : "Ask a question about your retail data..."
               }
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   handleSend();
                 }
@@ -493,6 +648,48 @@ const updateSource = (src) => {
           </div>
         </div>
       </div>
+      {fullscreenData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6">
+          <div className="max-h-[90vh] w-[90vw] overflow-auto rounded-lg bg-slate-900 p-6">
+            <div className="mb-4 flex justify-between">
+              <h2 className="text-sm font-semibold text-white">
+                Fullscreen Result
+              </h2>
+
+              <button
+                onClick={() => setFullscreenData(null)}
+                className="text-xs text-rose-400"
+              >
+                Close
+              </button>
+            </div>
+
+            <table className="min-w-full text-left text-sm text-slate-100">
+              <thead>
+                <tr>
+                  {Object.keys(fullscreenData[0] || {}).map((k) => (
+                    <th key={k} className="border-b border-slate-700 px-3 py-2">
+                      {k}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {fullscreenData.map((row, i) => (
+                  <tr key={i}>
+                    {Object.values(row).map((v, j) => (
+                      <td key={j} className="px-3 py-2">
+                        {String(v)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
