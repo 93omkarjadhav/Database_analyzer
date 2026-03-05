@@ -533,14 +533,14 @@ function App() {
   )}
 
   {/* ASSISTANT SUMMARY */}
-  {m.role === "assistant" && m.summary && (
-    <div>
-      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-        Summary
-      </div>
-      <p>{m.summary}</p>
+  {m.summary && (
+  <div>
+    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+      Summary
     </div>
-  )}
+    <p>{m.summary}</p>
+  </div>
+)}
 
   {/* SQL QUERY */}
   {m.role === "assistant" && m.query && (
