@@ -525,28 +525,36 @@ function App() {
                 <div className="mb-1 text-[11px] font-mono uppercase tracking-[0.18em] text-slate-400">
                   {m.role}
                 </div>
-                <div className="space-y-3 text-sm">
-                  {m.summary && (
-                    <div>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                        Summary
-                      </div>
-                      <p>{m.summary}</p>
-                    </div>
-                  )}
+               <div className="space-y-3 text-sm">
 
-                  {m.query && (
-                    <div>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                        SQL Query
-                      </div>
-                      <pre className="mt-1 overflow-x-auto rounded-md bg-slate-800 p-2 text-xs text-emerald-300">
-                        {m.query}
-                      </pre>
-                    </div>
-                  )}
-                </div>
+  {/* USER MESSAGE */}
+  {m.role === "user" && (
+    <p>{m.content}</p>
+  )}
 
+  {/* ASSISTANT SUMMARY */}
+  {m.role === "assistant" && m.summary && (
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+        Summary
+      </div>
+      <p>{m.summary}</p>
+    </div>
+  )}
+
+  {/* SQL QUERY */}
+  {m.role === "assistant" && m.query && (
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+        SQL Query
+      </div>
+      <pre className="mt-1 overflow-x-auto rounded-md bg-slate-800 p-2 text-xs text-emerald-300">
+        {m.query}
+      </pre>
+    </div>
+  )}
+
+</div>
                 {m.dataframe &&
                   Array.isArray(m.dataframe) &&
                   m.dataframe.length > 0 && (
