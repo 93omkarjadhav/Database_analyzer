@@ -2,7 +2,7 @@ const { ChatOpenAI } = require("@langchain/openai");
 const fs = require("fs");
 const csv = require("csv-parser");
 const { MongoClient } = require("mongodb");
-const { getMysqlConn, getPgPool, getSqliteDb } = require("../config/db");
+const { getMysqlConn, getPgPool, getSqliteDb,getBigQuery } = require("../config/db");
 
 const getAiResponse = async (prompt, source, filePath) => {
   const llm = new ChatOpenAI({
@@ -14,6 +14,7 @@ const getAiResponse = async (prompt, source, filePath) => {
   const mysqlConn = getMysqlConn();
   const pgPool = getPgPool();
   const sqliteDb = getSqliteDb();
+  const bigqueryClient = getBigQuery();
   // --- 1. MySQL Logic (with schema + auto-fix) ---
   if (source === "MySQL Database" && mysqlConn) {
     const [schemaRows] = await mysqlConn.query(`
@@ -289,6 +290,41 @@ Output ONLY valid JSON, e.g. {"summary":"...","rowLimit":5}`;
     });
   }
 
+  // Add/Update this block in your getAiResponse function
+if (source === "BigQuery") {
+    if (!bigqueryClient) return { role: "assistant", content: "BigQuery not connected." };
+
+    const datasetId = 'sales_data';
+    const [tables] = await bigqueryClient.dataset(datasetId).getTables();
+    const tableNames = tables.map(t => t.id).join(", ");
+
+    // STRICT PROMPT: Enforces Sandbox-friendly SELECT queries
+    const sqlPrompt = `You are a BigQuery Data Warehouse expert for a project in SANDBOX MODE. 
+    Dataset: 'retail-analytics-489405.${datasetId}', Tables: [${tableNames}].
+    
+    RULES:
+    1. You can ONLY use 'SELECT' statements. DML (INSERT/UPDATE/DELETE) is strictly forbidden.
+    2. Always use fully qualified names: \`retail-analytics-489405.${datasetId}.tableName\`.
+    3. If the user asks to add data, explain that Sandbox mode only supports reading.
+    
+    User Question: "${prompt}". 
+    Return ONLY the SQL string. No markdown.`;
+
+    const sqlRes = await llm.invoke(sqlPrompt);
+    const sql = sqlRes.content.replace(/```sql|```/g, "").trim();
+
+    try {
+        const [rows] = await bigqueryClient.query({ query: sql });
+        return { 
+            role: "assistant", 
+            content: `Analytical Query Executed: \`${sql}\``, 
+            dataframe: rows 
+        };
+    } catch (err) {
+        // Handle common Sandbox errors gracefully
+        return { role: "assistant", content: `Warehouse Analytics Error: ${err.message}` };
+    }
+}
   return {
     role: "assistant",
     content: "Source not recognized or data missing.",

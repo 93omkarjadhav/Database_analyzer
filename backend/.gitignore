@@ -3,3 +3,4 @@
 .DS_Store
 npm-debug.log*
 yarn-debug.log*
+google_key.json

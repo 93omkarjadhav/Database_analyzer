@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google-cloud/bigquery": "^8.1.1",
     "@langchain/community": "^0.3.59",
     "@langchain/core": "^0.3.80",
     "@langchain/mongodb": "^1.1.0",

@@ -2,10 +2,12 @@ const { Pool } = require('pg');
 const mysql = require('mysql2/promise');
 const mongoose = require('mongoose');
 const sqlite3 = require('sqlite3').verbose();
+const { BigQuery } = require('@google-cloud/bigquery');
 // Hold singleton connections so they can be reused across the app
 let mysqlConn;
 let pgPool;
 let sqliteDb;
+let bigqueryClient;
 const connectDatabases = async () => {
     try {
         // 1. MySQL (Workbench)
@@ -39,11 +41,19 @@ console.log("Neon connection working properly");
             dbName: process.env.MONGO_DB_NAME || 'sql_agent',
         });
         console.log("✅ MongoDB Connected");
+
+        bigqueryClient = new BigQuery({
+            projectId: process.env.BIGQUERY_PROJECT_ID,
+            keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+        });
+        console.log("✅ BigQuery Data Warehouse Connected");
+
+        return { mysqlConn, pgPool, sqliteDb, bigqueryClient };
     } catch (err) {
         console.error("❌ DB Error:", err);
     }
 };
-
+const getBigQuery = () => bigqueryClient;
 const getMysqlConn = () => mysqlConn;
 const getPgPool = () => pgPool;
 const getSqliteDb = () => sqliteDb;
@@ -52,4 +62,5 @@ module.exports = {
     getMysqlConn,
     getPgPool,  
     getSqliteDb,
+    getBigQuery, // Export the warehouse client
 };
