@@ -57,48 +57,104 @@ const getAiResponse = async (prompt, source, filePath) => {
   }
 
   // --- 2. PostgreSQL Logic (with schema + auto-fix) ---
-  if (source === "PostgreSQL" || source === "PostgreSQL (Local Agent)") {
-    if (!pgPool) {
-      return { role: "assistant", content: "PostgreSQL pool not initialized." };
-    }
+if (source === "PostgreSQL" || source === "PostgreSQL (Local Agent)") {
 
-    const schemaRes = await pgPool.query(`
-            SELECT table_name, column_name, data_type 
-            FROM information_schema.columns 
-            WHERE table_schema = 'public' 
-            ORDER BY table_name, ordinal_position
-        `);
-    const schemaByTable = {};
-    for (const r of schemaRes.rows) {
-      const t = r.table_name;
-      if (!schemaByTable[t]) schemaByTable[t] = [];
-      schemaByTable[t].push(`${r.column_name} (${r.data_type})`);
-    }
-    const schemaStr = Object.entries(schemaByTable)
-      .map(([t, cols]) => `${t}(${cols.join(", ")})`)
-      .join("; ");
-
-    let sqlRes = await llm.invoke(
-      `You are a PostgreSQL expert. Use ONLY the columns listed. Schema: ${schemaStr}. User question: ${prompt}. Return ONLY valid SQL, no markdown.`,
-    );
-    let sql = sqlRes.content.replace(/```sql|```/g, "").trim();
-
-    const res = await pgPool.query(sql);
-    const summary = `The system executed a query on the PostgreSQL database and retrieved ${res.rows.length} records.`;
-
-    const insights =
-      res.rows.length > 0
-        ? `There are total ${res.rows.length} items found in the result.`
-        : "No matching records were found.";
-
-    return {
-      role: "assistant",
-      summary: summary,
-      query: sql,
-      dataframe: res.rows,
-      insights: insights,
-    };
+  if (!pgPool) {
+    return { role: "assistant", content: "PostgreSQL pool not initialized." };
   }
+
+  // -----------------------------
+  // GET DATABASE SCHEMA
+  // -----------------------------
+  const schemaRes = await pgPool.query(`
+    SELECT table_name, column_name, data_type 
+    FROM information_schema.columns 
+    WHERE table_schema = 'public'
+    ORDER BY table_name, ordinal_position
+  `);
+
+  const schemaByTable = {};
+
+  for (const r of schemaRes.rows) {
+    const t = r.table_name;
+    if (!schemaByTable[t]) schemaByTable[t] = [];
+    schemaByTable[t].push(`${r.column_name} (${r.data_type})`);
+  }
+
+  const schemaStr = Object.entries(schemaByTable)
+    .map(([t, cols]) => `${t}(${cols.join(", ")})`)
+    .join("; ");
+
+  // -----------------------------
+  // AI SQL GENERATION
+  // -----------------------------
+  const sqlRes = await llm.invoke(`
+You are a PostgreSQL database expert.
+
+DATABASE SCHEMA:
+${schemaStr}
+
+USER QUESTION:
+"${prompt}"
+
+INSTRUCTIONS:
+- Generate a valid PostgreSQL SQL query.
+- Use ONLY the tables and columns provided in the schema.
+- Always include ORDER BY when selecting rows.
+- If the user asks for "last records", use ORDER BY id DESC.
+- If the user asks for "first records", use ORDER BY id ASC.
+- If the user asks for counts, use COUNT().
+- If the user asks for grouping or aggregations, use GROUP BY.
+- Always include LIMIT 50 for safety unless the user specifies a limit.
+- Return ONLY the SQL query.
+- Do NOT include explanation.
+
+Example:
+User: give me last 5 records
+SQL:
+SELECT * FROM users ORDER BY id DESC LIMIT 5;
+`);
+
+  let sql = sqlRes.content.replace(/```sql|```/g, "").trim();
+
+  // -----------------------------
+  // EXECUTE SQL
+  // -----------------------------
+  const res = await pgPool.query(sql);
+
+  // -----------------------------
+  // GENERATE SUMMARY
+  // -----------------------------
+  const summaryRes = await llm.invoke(`
+User question: "${prompt}"
+
+SQL Query executed:
+${sql}
+
+Number of rows returned:
+${res.rows.length}
+
+Write a short 1-2 line summary explaining the result.
+`);
+
+  const summary = summaryRes.content;
+
+  // -----------------------------
+  // INSIGHTS
+  // -----------------------------
+  const insights =
+    res.rows.length > 0
+      ? `There are ${res.rows.length} records returned from the database.`
+      : "No matching records were found in the database.";
+
+  return {
+    role: "assistant",
+    summary: summary,
+    query: sql,
+    dataframe: res.rows,
+    insights: insights,
+  };
+}
 
   // --- 3. MongoDB Logic (Theory + JSON + table) ---
   if (source === "MongoDB") {
@@ -161,66 +217,124 @@ Valid example:
   }
 
   // --- 4. File Upload Logic (CSV Analysis) ---
-  if (source === "Upload File" && filePath) {
-    const results = [];
-    return new Promise((resolve, reject) => {
-      fs.createReadStream(filePath)
-        .pipe(csv())
-        .on("data", (data) => results.push(data))
-        .on("end", async () => {
-          const columns = results.length ? Object.keys(results[0]) : [];
-          const totalRows = results.length;
-          const sample = JSON.stringify(results.slice(0, 15));
+if (source === "Upload File" && filePath) {
 
-          const analysisPrompt = `You are a data analyst. User asked: "${prompt}"
+  const results = [];
 
-CSV has ${totalRows} rows and columns: ${columns.join(", ")}.
-Sample (first 15 rows): ${sample}
+  return new Promise((resolve, reject) => {
 
-Return a JSON object with:
-1. "summary": A clear, concise analysis answering the user's question. If they asked for "top N rows" or "first N rows", acknowledge that and describe the data.
-2. "rowLimit": How many rows to show (number). For "top 5 rows" or "first 5" use 5. For "top 10" use 10. For general analysis use up to 20. Never exceed ${totalRows}.
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on("data", (data) => results.push(data))
 
-Output ONLY valid JSON, e.g. {"summary":"...","rowLimit":5}`;
+      .on("end", async () => {
 
-          const analysisRes = await llm.invoke(analysisPrompt);
-          let summary = "";
-          let rowLimit = 10;
+        const columns = results.length ? Object.keys(results[0]) : [];
+        const totalRows = results.length;
+        const lowerPrompt = prompt.toLowerCase();
+
+        let filteredRows = results;
+        let limit = 5;
+
+        // -------- Extract number dynamically --------
+        const parsedNumber = extractNumberFromText(lowerPrompt);
+        if (parsedNumber) limit = parsedNumber;
+
+        // -------- FIRST / LAST / TOP --------
+        if (lowerPrompt.includes("last")) {
+
+          filteredRows = results.slice(-limit);
+
+        } 
+        else if (lowerPrompt.includes("first") || lowerPrompt.includes("top")) {
+
+          filteredRows = results.slice(0, limit);
+
+        } 
+        else {
+
+          // -------- AI FILTER GENERATION --------
+          const queryRes = await llm.invoke(`
+You are analyzing CSV data.
+
+Columns:
+${columns.join(", ")}
+
+User question:
+"${prompt}"
+
+Return a JavaScript filter condition using row.column.
+
+Examples:
+
+User: show records of Rohit
+Output:
+row.name.toLowerCase().includes("rohit")
+
+User: users from Pune
+Output:
+row.city.toLowerCase() === "pune"
+
+If no filtering needed return:
+true
+
+Return ONLY the condition.
+`);
+
+          let filterCode = queryRes.content
+            .replace(/```/g, "")
+            .trim();
 
           try {
-            const jsonMatch = analysisRes.content.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]);
-              summary = parsed.summary || analysisRes.content;
-              rowLimit = Math.min(
-                Math.max(1, parseInt(parsed.rowLimit, 10) || 10),
-                totalRows,
-              );
-            } else {
-              summary = analysisRes.content;
-            }
+
+            const filterFunction = new Function("row", `return ${filterCode}`);
+
+            filteredRows = results.filter(filterFunction);
+
           } catch {
-            summary = analysisRes.content;
+
+            filteredRows = results.slice(0, limit);
+
           }
+        }
 
-          const rowsToShow = results.slice(0, rowLimit);
-          const insights =
-            rowsToShow.length > 0
-              ? `Showing ${rowsToShow.length} rows from the uploaded dataset.`
-              : "No data found in the file.";
+        if (filteredRows.length === 0) {
+          filteredRows = results.slice(0, limit);
+        }
 
-          resolve({
-            role: "assistant",
-            summary: summary,
-            query: "CSV Data Analysis",
-            dataframe: rowsToShow,
-            insights: insights,
-          });
-        })
-        .on("error", (err) => reject(err));
-    });
-  }
+        // -------- AI SUMMARY --------
+        const summaryRes = await llm.invoke(`
+User asked:
+"${prompt}"
 
+Rows returned:
+${filteredRows.length}
+
+Write a short explanation.
+`);
+
+        const summary = summaryRes.content;
+
+        const insights =
+          filteredRows.length > 0
+            ? `Found ${filteredRows.length} matching rows in the uploaded CSV dataset.`
+            : "No matching rows found.";
+
+        resolve({
+          role: "assistant",
+          summary: summary,
+          query: "CSV Data Analysis",
+          dataframe: filteredRows,
+          insights: insights
+        });
+
+      })
+
+      .on("error", (err) => reject(err));
+
+  });
+
+}
   if (source === "Oracle") {
     return {
       role: "assistant",

@@ -744,6 +744,8 @@ function App() {
   const [editingTitle, setEditingTitle] = useState("");
   const [fullscreenData, setFullscreenData] = useState(null);
   const [exportMenu, setExportMenu] = useState(null);
+  const [editingMessageIndex, setEditingMessageIndex] = useState(null);
+const [editedPrompt, setEditedPrompt] = useState('');
 
   // Load from localStorage on first render
   useEffect(() => {
@@ -772,6 +774,56 @@ function App() {
     setFullscreenData(data);
   };
 
+const saveEditedPrompt = async (index) => {
+  if (!editedPrompt.trim()) return;
+
+  const updatedMessages = activeChat.messages
+    .slice(0, index + 1)
+    .map((msg, i) =>
+      i === index ? { ...msg, content: editedPrompt } : msg
+    );
+
+  // Update messages in state
+  setSessions((prev) =>
+    prev.map((s) =>
+      s.id === activeId
+        ? {
+            ...s,
+            messages: updatedMessages,
+          }
+        : s
+    )
+  );
+
+  setEditingMessageIndex(null);
+
+  try {
+    setLoading(true);
+
+    const res = await axios.post(`${API_BASE}/api/chat`, {
+      message: editedPrompt,
+      source: activeChat.source,
+      filePath: activeChat.filePath,
+    });
+
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === activeId
+          ? {
+              ...s,
+              messages: [...updatedMessages, res.data],
+            }
+          : s
+      )
+    );
+
+  } catch (err) {
+    console.error("Edit query error:", err);
+  } finally {
+    setLoading(false);
+    setEditedPrompt("");
+  }
+};
   // Persist to localStorage whenever sessions change
   useEffect(() => {
     if (sessions.length) {
@@ -1021,6 +1073,7 @@ function App() {
                     {m.dataframe && <button onClick={() => openFullscreen(m.dataframe)} className="rounded bg-slate-800 p-1 hover:bg-slate-700"><Maximize2 className="h-3 w-3 text-slate-300" /></button>}
                   </div>
                 )}
+<<<<<<< Updated upstream
                 <div className="mb-2 text-[11px] font-mono uppercase tracking-[0.18em] text-slate-400">{m.role}</div>
                 <div className="space-y-4 text-sm leading-relaxed">
                   {m.role === "user" ? <p>{m.content}</p> : (
@@ -1038,6 +1091,104 @@ function App() {
                                 <tr key={ri} className="border-b border-slate-800/80 last:border-0 hover:bg-slate-800/60">
                                   {Object.values(row).map((v, ci) => (<td key={ci} className="max-w-[180px] truncate px-3 py-2 align-top">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}
                                 </tr>
+=======
+                <div className="mb-1 text-[11px] font-mono uppercase tracking-[0.18em] text-slate-400">
+                  {m.role}
+                </div>
+               <div className="space-y-3 text-sm">
+
+  {/* USER MESSAGE */}
+  {m.role === "user" && (
+  <div className="flex items-start gap-2">
+    
+    {editingMessageIndex === i ? (
+      <textarea
+        value={editedPrompt}
+        onChange={(e) => setEditedPrompt(e.target.value)}
+        onBlur={() => saveEditedPrompt(i)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            saveEditedPrompt(i);
+          }
+        }}
+        className="flex-1 rounded bg-slate-800 p-2 text-sm outline-none"
+      />
+    ) : (
+      <>
+        <p className="flex-1">{m.content}</p>
+
+        <button
+          onClick={() => {
+            setEditingMessageIndex(i);
+            setEditedPrompt(m.content);
+          }}
+          className="text-slate-400 hover:text-blue-400"
+        >
+          <Pencil size={14} />
+        </button>
+      </>
+    )}
+
+  </div>
+)}
+
+  {/* ASSISTANT SUMMARY */}
+  {m.summary && (
+  <div>
+    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+      Summary
+    </div>
+    <p>{m.summary}</p>
+  </div>
+)}
+
+  {/* SQL QUERY */}
+  {m.role === "assistant" && m.query && (
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+        SQL Query
+      </div>
+      <pre className="mt-1 overflow-x-auto rounded-md bg-slate-800 p-2 text-xs text-emerald-300">
+        {m.query}
+      </pre>
+    </div>
+  )}
+
+</div>
+                {m.dataframe &&
+                  Array.isArray(m.dataframe) &&
+                  m.dataframe.length > 0 && (
+                    <div className="mt-3 overflow-x-auto rounded-md border border-slate-700 bg-slate-900/80">
+                      <table className="min-w-full text-left text-[11px] text-slate-100">
+                        <thead className="bg-slate-900/80 text-slate-300">
+                          <tr>
+                            {Object.keys(m.dataframe[0] || {}).map((k) => (
+                              <th
+                                key={k}
+                                className="border-b border-slate-800 px-2 py-1 font-medium"
+                              >
+                                {k}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {m.dataframe.map((row, ri) => (
+                            <tr
+                              key={ri}
+                              className="border-b border-slate-800/80 last:border-0 hover:bg-slate-800/60"
+                            >
+                              {Object.values(row).map((v, ci) => (
+                                <td
+                                  key={ci}
+                                  className="max-w-[180px] truncate px-2 py-1 align-top"
+                                >
+                                  {typeof v === "object"
+                                    ? JSON.stringify(v)
+                                    : String(v)}
+                                </td>
+>>>>>>> Stashed changes
                               ))}
                             </tbody>
                           </table>
