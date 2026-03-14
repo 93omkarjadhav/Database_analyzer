@@ -60,11 +60,12 @@ function App() {
   // Session management functions
   const createNewChat = () => {
     const newId = Date.now().toString();
+    const currentSource = activeChat ? activeChat.source : "MySQL Database";
     const newSession = {
       id: newId,
       title: "New Session",
       messages: [],
-      source: "MySQL Database",
+      source: currentSource,
       filePath: null,
       fileName: null,
     };
@@ -95,17 +96,11 @@ function App() {
   const updateSource = (src) => {
     if (!activeChat) return;
     if (activeChat.source === src) return;
-    const newId = Date.now().toString();
-    const newSession = {
-      id: newId,
-      title: "New Session",
-      messages: [],
-      source: src,
-      filePath: null,
-      fileName: null,
-    };
-    setSessions((prev) => [newSession, ...prev]);
-    setActiveId(newId);
+
+    // Update the source for the current session instead of creating an extra one
+    setSessions((prev) =>
+      prev.map((s) => (s.id === activeId ? { ...s, source: src } : s))
+    );
   };
 
   // File upload handler
@@ -119,11 +114,11 @@ function App() {
         prev.map((s) =>
           s.id === activeId
             ? {
-                ...s,
-                filePath: data.filePath,
-                fileName: data.fileName,
-                source: "Upload File",
-              }
+              ...s,
+              filePath: data.filePath,
+              fileName: data.fileName,
+              source: "Upload File",
+            }
             : s
         )
       );
@@ -146,13 +141,13 @@ function App() {
       prev.map((s) =>
         s.id === activeId
           ? {
-              ...s,
-              messages: updatedMessages,
-              title:
-                s.title === "New Session"
-                  ? `${input.slice(0, 25)}...`
-                  : s.title,
-            }
+            ...s,
+            messages: updatedMessages,
+            title:
+              s.title === "New Session"
+                ? `${input.slice(0, 25)}...`
+                : s.title,
+          }
           : s
       )
     );
@@ -177,12 +172,12 @@ function App() {
         prev.map((s) =>
           s.id === activeId
             ? {
-                ...s,
-                messages: [
-                  ...updatedMessages,
-                  { role: "assistant", content: "Error processing request." },
-                ],
-              }
+              ...s,
+              messages: [
+                ...updatedMessages,
+                { role: "assistant", content: "Error processing request." },
+              ],
+            }
             : s
         )
       );

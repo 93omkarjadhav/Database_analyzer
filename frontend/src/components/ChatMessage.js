@@ -22,9 +22,10 @@ function ChatMessage({
 
   return (
     <div
-      className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+      className={`flex w-full ${m.role === "user" ? "justify-end" : "justify-start"}`}
     >
-      <div className="relative max-w-[85%] rounded-lg border border-slate-700 bg-slate-800 p-4 shadow-sm">
+      <div className={`relative max-w-[85%] border border-slate-700 bg-slate-800 p-5 shadow-sm transition-all hover:shadow-md ${m.role === "user" ? "rounded-[32px] rounded-br-[8px]" : "rounded-[32px] rounded-bl-[8px]"
+        }`}>
         {m.role === "assistant" && (
           <ExportMenu
             index={index}
@@ -38,11 +39,6 @@ function ChatMessage({
             exportText={exportText}
           />
         )}
-
-        <div className="mb-1 text-[11px] font-mono uppercase tracking-[0.18em] text-slate-400">
-          {m.role}
-        </div>
-
         <div className="space-y-3 text-sm leading-relaxed">
           {m.role === "user" && (
             <div className="flex items-start gap-2">
@@ -143,7 +139,7 @@ function ChatMessage({
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 }
 

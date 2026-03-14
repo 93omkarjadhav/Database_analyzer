@@ -22,15 +22,14 @@ function SessionList({
         <Plus className="h-4 w-4" /> New Chat
       </button>
 
-      <div className="mb-4 flex-1 space-y-1 overflow-y-auto pr-1">
+      <div className="mb-4 flex-1 space-y-1 overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         {sessions.map((s) => (
           <div
             key={s.id}
-            className={`group flex items-center gap-2 rounded-md px-2 py-2 text-xs ${
-              activeId === s.id
+            className={`group flex items-center gap-2 rounded-md px-2 py-2 text-xs ${activeId === s.id
                 ? "bg-slate-800 text-slate-50"
                 : "cursor-pointer text-slate-300 hover:bg-slate-800/70"
-            }`}
+              }`}
           >
             {editingId === s.id ? (
               <input

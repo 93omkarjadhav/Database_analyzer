@@ -18,7 +18,7 @@ function MessageList({
   loading,
 }) {
   return (
-    <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6 pb-32">
+    <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6 pb-32 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
       {messages.map((m, i) => (
         <ChatMessage
           key={i}
@@ -40,7 +40,7 @@ function MessageList({
       ))}
       {loading && (
         <div className="animate-pulse text-xs font-medium text-rose-400">
-          Agent is querying the warehouse...
+          Agent is Analyzing the data...
         </div>
       )}
     </div>
