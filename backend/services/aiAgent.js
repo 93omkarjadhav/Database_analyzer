@@ -15,45 +15,100 @@ const getAiResponse = async (prompt, source, filePath) => {
   const pgPool = getPgPool();
   const sqliteDb = getSqliteDb();
   const bigqueryClient = getBigQuery();
-  // --- 1. MySQL Logic (with schema + auto-fix) ---
+  // --- 1. MySQL Logic: realtime CREATE/INSERT/UPDATE/SELECT, block DROP/DELETE ---
   if (source === "MySQL Database" && mysqlConn) {
-    const [schemaRows] = await mysqlConn.query(`
-            SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE 
-            FROM information_schema.COLUMNS 
-            WHERE TABLE_SCHEMA = DATABASE()
-            ORDER BY TABLE_NAME, ORDINAL_POSITION
-        `);
-    const schemaByTable = {};
-    for (const r of schemaRows) {
-      const t = r.TABLE_NAME;
-      if (!schemaByTable[t]) schemaByTable[t] = [];
-      schemaByTable[t].push(`${r.COLUMN_NAME} (${r.DATA_TYPE})`);
-    }
-    const schemaStr = Object.entries(schemaByTable)
-      .map(([t, cols]) => `${t}(${cols.join(", ")})`)
-      .join("; ");
+    const FORBIDDEN = /DROP\s|DELETE\s|TRUNCATE\s/i;
 
-    let sqlRes = await llm.invoke(
-      `You are a MySQL expert. Use ONLY the columns listed. Schema: ${schemaStr}. User question: ${prompt}. Return ONLY valid MySQL SQL, no markdown.`,
-    );
-    let sql = sqlRes.content.replace(/```sql|```/g, "").trim();
-
-    const [data] = await mysqlConn.query(sql);
-
-    const summary = `The system executed a query on the MySQL database to answer your question. ${data.length} records were retrieved.`;
-
-    const insights =
-      data.length > 0
-        ? `There are total ${data.length} items found in the result.`
-        : "No matching records were found.";
-
-    return {
-      role: "assistant",
-      summary: summary,
-      query: sql,
-      dataframe: data,
-      insights: insights,
+    const isLikelyRawSql = (text) => {
+      const t = text.trim().toUpperCase();
+      return (
+        t.startsWith("CREATE ") ||
+        t.startsWith("INSERT ") ||
+        t.startsWith("UPDATE ") ||
+        t.startsWith("SELECT ") ||
+        t.startsWith("ALTER ")
+      );
     };
+
+    let sql;
+    if (isLikelyRawSql(prompt)) {
+      sql = prompt.replace(/```sql|```/g, "").trim();
+    } else {
+      const [schemaRows] = await mysqlConn.query(`
+        SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE 
+        FROM information_schema.COLUMNS 
+        WHERE TABLE_SCHEMA = DATABASE()
+        ORDER BY TABLE_NAME, ORDINAL_POSITION
+      `);
+      const schemaByTable = {};
+      for (const r of schemaRows) {
+        const t = r.TABLE_NAME;
+        if (!schemaByTable[t]) schemaByTable[t] = [];
+        schemaByTable[t].push(`${r.COLUMN_NAME} (${r.DATA_TYPE})`);
+      }
+      const schemaStr = Object.entries(schemaByTable)
+        .map(([t, cols]) => `${t}(${cols.join(", ")})`)
+        .join("; ");
+      const sqlRes = await llm.invoke(
+        `You are a MySQL expert. Use ONLY the columns listed. Schema: ${schemaStr}. User question: ${prompt}. Return ONLY valid MySQL SQL, no markdown. Do NOT use DROP, DELETE, or TRUNCATE.`,
+      );
+      sql = sqlRes.content.replace(/```sql|```/g, "").trim();
+    }
+
+    if (sql.includes("FORBIDDEN_ACTION") || FORBIDDEN.test(sql)) {
+      return {
+        role: "assistant",
+        content: "⚠️ Restricted: You do not have permission to DROP or DELETE data.",
+        summary: "Command Blocked",
+        query: null,
+        dataframe: null,
+        insights: null,
+      };
+    }
+
+    try {
+      const isSelect = /^\s*SELECT\s/i.test(sql);
+      if (isSelect) {
+        const [data] = await mysqlConn.query(sql);
+        const summary = `Executed query on MySQL. ${data.length} record(s) retrieved.`;
+        const insights =
+          data.length > 0
+            ? `Total ${data.length} row(s) in the result.`
+            : "No matching records.";
+        return {
+          role: "assistant",
+          content: summary,
+          summary,
+          query: sql,
+          dataframe: data,
+          insights,
+        };
+      }
+      await mysqlConn.query(sql);
+      const summary = "Command executed successfully in MySQL Workbench.";
+      const insights =
+        /INSERT/i.test(sql) ? "Rows inserted." :
+        /UPDATE/i.test(sql) ? "Rows updated." :
+        /CREATE/i.test(sql) ? "Table created." :
+        "Done.";
+      return {
+        role: "assistant",
+        content: summary,
+        summary,
+        query: sql,
+        dataframe: [],
+        insights,
+      };
+    } catch (err) {
+      return {
+        role: "assistant",
+        content: `MySQL error: ${err.message}`,
+        summary: "Error",
+        query: sql,
+        dataframe: null,
+        insights: null,
+      };
+    }
   }
 
   // --- 2. PostgreSQL Logic (with schema + auto-fix) ---
