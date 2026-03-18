@@ -34,7 +34,7 @@ function ChatMessage({
     <div
       className={`flex w-full ${m.role === "user" ? "justify-end" : "justify-start"}`}
     >
-      <div className={`relative max-w-[85%] border border-slate-700 bg-slate-800 p-5 shadow-sm transition-all hover:shadow-md ${m.role === "user" ? "rounded-[32px] rounded-br-[8px]" : "rounded-[32px] rounded-bl-[8px]"
+      <div className={`relative max-w-[85%] border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-5 shadow-sm transition-all hover:shadow-md ${m.role === "user" ? "rounded-[32px] rounded-br-[8px]" : "rounded-[32px] rounded-bl-[8px]"
         }`}>
         {m.role === "assistant" && (
           <ExportMenu
@@ -63,7 +63,7 @@ function ChatMessage({
                       saveEditedPrompt(index);
                     }
                   }}
-                  className="flex-1 rounded bg-slate-900 p-2 text-sm outline-none"
+                  className="flex-1 rounded bg-slate-50 dark:bg-slate-900 p-2 text-sm outline-none"
                 />
               ) : (
                 <>
@@ -73,7 +73,7 @@ function ChatMessage({
                       setEditingMessageIndex(index);
                       setEditedPrompt(m.content);
                     }}
-                    className="text-slate-400 hover:text-blue-400"
+                    className="text-slate-500 dark:text-slate-400 hover:text-blue-400"
                     aria-label="Edit prompt"
                   >
                     <Pencil size={14} />
@@ -85,7 +85,7 @@ function ChatMessage({
 
           {m.summary && (
             <div>
-              <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
                 Summary
               </div>
               <p>{m.summary}</p>
@@ -94,7 +94,7 @@ function ChatMessage({
 
           {m.role === "assistant" && m.query && (
             <div>
-              <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
                 SQL Query
               </div>
               <pre className="mt-1 overflow-x-auto rounded-md border border-emerald-500/20 bg-black/40 p-3 text-xs text-emerald-400">
@@ -128,14 +128,14 @@ function ChatMessage({
         </div>
 
         {m.dataframe && Array.isArray(m.dataframe) && m.dataframe.length > 0 && (
-          <div className="mt-3 overflow-x-auto rounded-md border border-slate-700 bg-slate-900/80">
-            <table className="min-w-full text-left text-[11px] text-slate-100">
-              <thead className="bg-slate-900 uppercase tracking-tighter text-slate-400">
+          <div className="mt-3 overflow-x-auto rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/80">
+            <table className="min-w-full text-left text-[11px] text-slate-800 dark:text-slate-100">
+              <thead className="bg-slate-50 dark:bg-slate-900 uppercase tracking-tighter text-slate-500 dark:text-slate-400">
                 <tr>
                   {Object.keys(m.dataframe[0] || {}).map((k) => (
                     <th
                       key={k}
-                      className="border-b border-slate-800 px-3 py-2 font-bold"
+                      className="border-b border-slate-200 dark:border-slate-800 px-3 py-2 font-bold"
                     >
                       {k}
                     </th>
@@ -146,7 +146,7 @@ function ChatMessage({
                 {m.dataframe.map((row, ri) => (
                   <tr
                     key={ri}
-                    className="border-b border-slate-800/80 hover:bg-slate-800/60 last:border-0"
+                    className="border-b border-slate-200/80 dark:border-slate-800/80 hover:bg-slate-100/60 dark:hover:bg-slate-800/60 last:border-0"
                   >
                     {Object.values(row).map((v, ci) => (
                       <td
@@ -168,7 +168,7 @@ function ChatMessage({
             <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-rose-400">
               Agent Insight
             </div>
-            <p className="text-sm italic text-slate-300">{m.insights}</p>
+            <p className="text-sm italic text-slate-600 dark:text-slate-300">{m.insights}</p>
           </div>
         )}
       </div>

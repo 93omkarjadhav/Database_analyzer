@@ -23,6 +23,23 @@ function App() {
   const [editingMessageIndex, setEditingMessageIndex] = useState(null);
   const [editedPrompt, setEditedPrompt] = useState("");
 
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem("theme");
+    return saved === "light" ? false : true;
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [isDarkMode]);
+
+  const toggleTheme = () => setIsDarkMode((prev) => !prev);
+
   // Load sessions from localStorage on first render
   useEffect(() => {
     const stored = localStorage.getItem("retail-ai-sessions");
@@ -99,10 +116,37 @@ function App() {
     if (!activeChat) return;
     if (activeChat.source === src) return;
 
-    // Update the source for the current session instead of creating an extra one
-    setSessions((prev) =>
-      prev.map((s) => (s.id === activeId ? { ...s, source: src } : s))
-    );
+    const existingSession = sessions.find((s) => s.source === src);
+
+    if (existingSession) {
+      // If switching to an existing session and the current one is completely empty, 
+      // remove the empty one to prevent sidebar clutter.
+      if (activeChat.messages.length === 0 && activeChat.title === "New Session" && sessions.length > 1) {
+        setSessions((prev) => prev.filter((s) => s.id !== activeId));
+      }
+      setActiveId(existingSession.id);
+    } else {
+      // If no session exists for the new source, and the current one is completely empty, 
+      // just reuse it by changing its source.
+      if (activeChat.messages.length === 0 && activeChat.title === "New Session") {
+        setSessions((prev) =>
+          prev.map((s) => (s.id === activeId ? { ...s, source: src } : s))
+        );
+      } else {
+        // Otherwise, create a brand new session for the selected source.
+        const newId = Date.now().toString();
+        const newSession = {
+          id: newId,
+          title: "New Session",
+          messages: [],
+          source: src,
+          filePath: null,
+          fileName: null,
+        };
+        setSessions((prev) => [newSession, ...prev]);
+        setActiveId(newId);
+      }
+    }
   };
 
   // File upload handler
@@ -296,10 +340,10 @@ function App() {
   // No active chat - show create session button
   if (!activeChat) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-950 text-slate-100">
+      <div className="flex h-screen items-center justify-center bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100">
         <button
           onClick={createNewChat}
-          className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium hover:bg-slate-800"
+          className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
         >
           Create first session
         </button>
@@ -308,7 +352,7 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-50">
+    <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-50">
       <Sidebar
         sessions={sessions}
         activeId={activeId}
@@ -326,8 +370,8 @@ function App() {
         handleFileUpload={handleFileUpload}
       />
 
-      <div className="relative flex flex-1 flex-col bg-slate-950">
-        <Header activeChat={activeChat} />
+      <div className="relative flex flex-1 flex-col bg-white dark:bg-slate-950">
+        <Header activeChat={activeChat} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
 
         <MessageList
           messages={activeChat.messages}

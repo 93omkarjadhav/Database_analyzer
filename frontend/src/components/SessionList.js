@@ -17,7 +17,7 @@ function SessionList({
     <>
       <button
         onClick={createNewChat}
-        className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-medium hover:bg-slate-800"
+        className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
       >
         <Plus className="h-4 w-4" /> New Chat
       </button>
@@ -27,8 +27,8 @@ function SessionList({
           <div
             key={s.id}
             className={`group flex items-center gap-2 rounded-md px-2 py-2 text-xs ${activeId === s.id
-                ? "bg-slate-800 text-slate-50"
-                : "cursor-pointer text-slate-300 hover:bg-slate-800/70"
+                ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-50"
+                : "cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/70"
               }`}
           >
             {editingId === s.id ? (
@@ -38,7 +38,7 @@ function SessionList({
                 onChange={(e) => setEditingTitle(e.target.value)}
                 onBlur={() => renameSession(s.id)}
                 onKeyDown={(e) => e.key === "Enter" && renameSession(s.id)}
-                className="flex-1 rounded bg-slate-700 px-2 py-1 text-xs outline-none"
+                className="flex-1 rounded bg-slate-200 dark:bg-slate-700 px-2 py-1 text-xs outline-none"
               />
             ) : (
               <button
