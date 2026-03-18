@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { Pencil, Wand2 } from "lucide-react";
 import ExportMenu from "./ExportMenu";
+import DataChart from "./DataChart";
+//import { useState } from "react";
 
 function ChatMessage({
   message,
@@ -29,6 +31,8 @@ function ChatMessage({
     // Only show for MySQL errors
     return typeof m.content === "string" && m.content.startsWith("MySQL error:");
   }, [m]);
+
+const [chartType, setChartType] = useState("");
 
   return (
     <div
@@ -127,7 +131,7 @@ function ChatMessage({
           )}
         </div>
 
-        {m.dataframe && Array.isArray(m.dataframe) && m.dataframe.length > 0 && (
+        {/* {m.dataframe && Array.isArray(m.dataframe) && m.dataframe.length > 0 && (
           <div className="mt-3 overflow-x-auto rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/80">
             <table className="min-w-full text-left text-[11px] text-slate-800 dark:text-slate-100">
               <thead className="bg-slate-50 dark:bg-slate-900 uppercase tracking-tighter text-slate-500 dark:text-slate-400">
@@ -161,8 +165,76 @@ function ChatMessage({
               </tbody>
             </table>
           </div>
-        )}
+        )} */}
+{m.dataframe && m.dataframe.length > 0 && (
+  <div className="mt-3 w-full overflow-auto rounded-md border border-slate-700 bg-slate-900/80">
+    <table className="w-full min-w-[600px] text-left text-[11px] text-slate-100">
+      <thead className="bg-slate-900 uppercase tracking-tighter text-slate-400">
+        <tr>
+          {Object.keys(m.dataframe[0] || {}).map((k) => (
+            <th
+              key={k}
+              className="border-b border-slate-800 px-3 py-2 font-bold"
+            >
+              {k}
+            </th>
+          ))}
+        </tr>
+      </thead>
 
+      <tbody>
+        {m.dataframe.map((row, ri) => (
+          <tr
+            key={ri}
+            className="border-b border-slate-800/80 hover:bg-slate-800/60 last:border-0"
+          >
+            {Object.values(row).map((v, ci) => (
+              <td
+                key={ci}
+                className="max-w-[180px] truncate px-3 py-2"
+              >
+                {typeof v === "object"
+                  ? JSON.stringify(v)
+                  : String(v)}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+)}
+
+{m.visualize && m.dataframe && m.dataframe.length > 0 && (
+  <div className="mt-4 w-full max-w-[900px]">
+
+    {/* Selector */}
+    <div className="flex items-center gap-2 mb-3">
+      <label className="text-xs text-slate-400">
+        Chart Type:
+      </label>
+
+      <select
+        value={chartType || m.chart || "bar"}
+        onChange={(e) => setChartType(e.target.value)}
+        className="rounded bg-slate-800 px-3 py-1 text-xs text-white border border-slate-600"
+      >
+        <option value="bar">Bar Chart</option>
+        <option value="line">Line Chart</option>
+        <option value="pie">Pie Chart</option>
+      </select>
+    </div>
+
+    {/* Chart */}
+    <div className="w-full h-[420px] bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-4 shadow-lg border border-slate-700">
+      <DataChart
+        data={m.dataframe}
+        type={chartType || m.chart || "bar"}
+      />
+    </div>
+
+  </div>
+)}
         {m.insights && (
           <div className="mt-4 rounded-md border-l-2 border-rose-500 bg-rose-500/5 p-3">
             <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-rose-400">

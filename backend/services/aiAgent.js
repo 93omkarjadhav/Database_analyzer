@@ -58,15 +58,58 @@ MySQL Error: ${errorMessage}
 
   return { blocked: false, fixedSql };
 }
+//const {  getPgPool, getSqliteDb,getBigQuery } = require("../config/db");
+let lastDataFrame = null;
 
 const getAiResponse = async (prompt, source, filePath) => {
+
+  const lowerPrompt = prompt.toLowerCase();
+
+let chartType = null;
+let visualize = false;
+let visualizeOnly = false;
+
+// 🔥 Handle "visualize previous data"
+if (visualizeOnly && lastDataFrame) {
+  return {
+    role: "assistant",
+    dataframe: lastDataFrame,
+    visualize: true,
+    visualizeOnly: true,
+    chart: chartType || "bar"
+  };
+}
+
+if (
+  lowerPrompt.includes("chart") ||
+  lowerPrompt.includes("graph") ||
+  lowerPrompt.includes("visualize") ||
+  lowerPrompt.includes("plot")
+) {
+  visualize = true;
+
+  if (
+    lowerPrompt.includes("above") ||
+    lowerPrompt.includes("previous") ||
+    lowerPrompt.includes("given")
+  ) {
+    visualizeOnly = true;
+  }
+
+  if (lowerPrompt.includes("bar")) chartType = "bar";
+  else if (lowerPrompt.includes("line")) chartType = "line";
+  else if (lowerPrompt.includes("pie")) chartType = "pie";
+}
+
+
+
   const llm = new ChatOpenAI({
     openAIApiKey: process.env.OPENAI_API_KEY,
     modelName: "gpt-4o-mini",
     temperature: 0,
   });
 
-  const mysqlConn = getMysqlConn();
+const mysqlConn = getMysqlConn();
   const pgPool = getPgPool();
   const sqliteDb = getSqliteDb();
   const bigqueryClient = getBigQuery();
@@ -111,14 +154,17 @@ const getAiResponse = async (prompt, source, filePath) => {
     }
 
     if (sql.includes("FORBIDDEN_ACTION") || FORBIDDEN.test(sql)) {
-      return {
-        role: "assistant",
-        content: "⚠️ Restricted: You do not have permission to DROP or DELETE data.",
-        summary: "Command Blocked",
-        query: null,
-        dataframe: null,
-        insights: null,
-      };
+     return {
+  role: "assistant",
+  content: "⚠️ Restricted: You do not have permission to DROP or DELETE data.",
+  summary: "Command Blocked",
+  query: null,
+  dataframe: null,
+  insights: null,
+  visualize: false,
+  visualizeOnly: false,
+  chart: null
+};
     }
 
     try {
@@ -226,7 +272,18 @@ SQL:
 SELECT * FROM users ORDER BY id DESC LIMIT 5;
 `);
 
-  let sql = sqlRes.content.replace(/```sql|```/g, "").trim();
+let sql = sqlRes.content
+  .replace(/```sql|```/gi, "")
+  .replace(/SQL:/gi, "")
+  .replace(/Here is the SQL query:/gi, "")
+  .trim();
+
+// ✅ Extract only SELECT query
+const match = sql.match(/select[\s\S]*/i);
+
+if (match) {
+  sql = match[0];
+}
 
   // -----------------------------
   // EXECUTE SQL
@@ -258,13 +315,19 @@ Write a short 1-2 line summary explaining the result.
       ? `There are ${res.rows.length} records returned from the database.`
       : "No matching records were found in the database.";
 
-  return {
-    role: "assistant",
-    summary: summary,
-    query: sql,
-    dataframe: res.rows,
-    insights: insights,
-  };
+ // ✅ store last result
+lastDataFrame = res.rows;
+
+return {
+  role: "assistant",
+  summary: summary,
+  query: sql,
+  dataframe: res.rows,
+  insights: insights,
+  visualize: visualize,
+  visualizeOnly: visualizeOnly,
+  chart: chartType
+};
 }
 
   // --- 3. MongoDB Logic (Theory + JSON + table) ---
@@ -319,12 +382,18 @@ Valid example:
     // content  = explanation
     // dataframe = table in UI
     // jsonData  = raw JSON docs
-    return {
-      role: "assistant",
-      content: parsed.summary || "Query executed on MongoDB.",
-      dataframe: result,
-      jsonData: result,
-    };
+   // ✅ store last result
+lastDataFrame = result;
+
+return {
+  role: "assistant",
+  content: parsed.summary || "Query executed on MongoDB.",
+  dataframe: result,
+  jsonData: result,
+  visualize: visualize,
+  visualizeOnly: visualizeOnly,
+  chart: chartType
+};
   }
 
   // --- 4. File Upload Logic (CSV Analysis) ---
@@ -431,13 +500,19 @@ Write a short explanation.
             ? `Found ${filteredRows.length} matching rows in the uploaded CSV dataset.`
             : "No matching rows found.";
 
-        resolve({
-          role: "assistant",
-          summary: summary,
-          query: "CSV Data Analysis",
-          dataframe: filteredRows,
-          insights: insights
-        });
+        // ✅ store last result
+lastDataFrame = filteredRows;
+
+resolve({
+  role: "assistant",
+  summary: summary,
+  query: "CSV Data Analysis",
+  dataframe: filteredRows,
+  insights: insights,
+  visualize: visualize,
+  visualizeOnly: visualizeOnly,
+  chart: chartType
+});
 
       })
 
@@ -502,13 +577,19 @@ Write a short explanation.
                 ? `There are total ${data.length} items found in the result.`
                 : "No matching records were found.";
 
-            resolve({
-              role: "assistant",
-              summary: summary,
-              query: sql,
-              dataframe: data,
-              insights: insights,
-            });
+            // ✅ store last result
+lastDataFrame = data;
+
+resolve({
+  role: "assistant",
+  summary: summary,
+  query: sql,
+  dataframe: data,
+  insights: insights,
+  visualize: visualize,
+  visualizeOnly: visualizeOnly,
+  chart: chartType
+});
           });
         },
       );
@@ -540,11 +621,17 @@ if (source === "BigQuery") {
 
     try {
         const [rows] = await bigqueryClient.query({ query: sql });
-        return { 
-            role: "assistant", 
-            content: `Analytical Query Executed: \`${sql}\``, 
-            dataframe: rows 
-        };
+       // ✅ store last result
+lastDataFrame = rows;
+
+return { 
+  role: "assistant", 
+  content: `Analytical Query Executed: \`${sql}\``, 
+  dataframe: rows,
+  visualize: visualize,
+  visualizeOnly: visualizeOnly,
+  chart: chartType
+};
     } catch (err) {
         // Handle common Sandbox errors gracefully
         return { role: "assistant", content: `Warehouse Analytics Error: ${err.message}` };
