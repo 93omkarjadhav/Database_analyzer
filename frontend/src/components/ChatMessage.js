@@ -1,5 +1,5 @@
-import React from "react";
-import { Pencil } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { Pencil, Wand2 } from "lucide-react";
 import ExportMenu from "./ExportMenu";
 
 function ChatMessage({
@@ -17,8 +17,18 @@ function ChatMessage({
   exportExcel,
   exportJSON,
   exportText,
+  onAutofix,
 }) {
   const m = message;
+  const [fixing, setFixing] = useState(false);
+
+  const showAutofix = useMemo(() => {
+    if (m.role !== "assistant") return false;
+    if (!m.query) return false;
+    if (!m.summary || m.summary !== "Error") return false;
+    // Only show for MySQL errors
+    return typeof m.content === "string" && m.content.startsWith("MySQL error:");
+  }, [m]);
 
   return (
     <div
@@ -90,6 +100,29 @@ function ChatMessage({
               <pre className="mt-1 overflow-x-auto rounded-md border border-emerald-500/20 bg-black/40 p-3 text-xs text-emerald-400">
                 {m.query}
               </pre>
+              {showAutofix && (
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    disabled={fixing}
+                    onClick={async () => {
+                      if (!onAutofix) return;
+                      try {
+                        setFixing(true);
+                        await onAutofix(m);
+                      } finally {
+                        setFixing(false);
+                      }
+                    }}
+                    className="inline-flex items-center gap-2 rounded-md border border-slate-600 bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-slate-100 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Wand2 size={14} />
+                    {fixing ? "Fixing..." : "Autofix"}
+                  </button>
+                  <span className="text-[11px] text-slate-400">
+                    Fix the SQL and rerun automatically
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>

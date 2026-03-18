@@ -16,6 +16,7 @@ function MessageList({
   exportJSON,
   exportText,
   loading,
+  onAutofix,
 }) {
   return (
     <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6 pb-32 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
@@ -36,6 +37,7 @@ function MessageList({
           exportExcel={exportExcel}
           exportJSON={exportJSON}
           exportText={exportText}
+          onAutofix={onAutofix}
         />
       ))}
       {loading && (

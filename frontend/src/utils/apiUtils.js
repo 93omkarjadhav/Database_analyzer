@@ -19,3 +19,11 @@ export const sendChatMessage = async (message, source, filePath) => {
   });
   return response.data;
 };
+
+export const autofixMySql = async (sql, errorMessage) => {
+  const response = await axios.post(`${API_BASE}/api/mysql/autofix`, {
+    sql,
+    errorMessage,
+  });
+  return response.data;
+};

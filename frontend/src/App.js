@@ -6,7 +6,7 @@ import Header from "./components/Header";
 import MessageList from "./components/MessageList";
 import ChatInput from "./components/ChatInput";
 import FullscreenModal from "./components/FullscreenModal";
-import { uploadFile, sendChatMessage } from "./utils/apiUtils";
+import { uploadFile, sendChatMessage, autofixMySql } from "./utils/apiUtils";
 import { exportCSV, exportExcel, exportJSON, exportText } from "./utils/exportUtils";
 
 function App() {
@@ -188,6 +188,70 @@ function App() {
     }
   };
 
+  // Autofix handler for MySQL SQL errors
+  const handleAutofix = async (assistantMsg) => {
+    if (!activeChat) return;
+    if (activeChat.source !== "MySQL Database") return;
+    if (!assistantMsg?.query) return;
+
+    const brokenSql = assistantMsg.query;
+    const errMsg = assistantMsg.error || assistantMsg.content || "";
+
+    setLoading(true);
+    try {
+      const fixRes = await autofixMySql(brokenSql, errMsg);
+      if (fixRes.blocked) {
+        // Append a blocked response
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === activeId
+              ? {
+                ...s,
+                messages: [
+                  ...s.messages,
+                  {
+                    role: "assistant",
+                    summary: "Command Blocked",
+                    content: fixRes.reason,
+                  },
+                ],
+              }
+              : s
+          )
+        );
+        return;
+      }
+
+      // Show the fixed SQL in the input (like Copilot-style) and also append the execution result message
+      if (fixRes.fixedSql) setInput(fixRes.fixedSql);
+
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === activeId
+            ? { ...s, messages: [...s.messages, fixRes] }
+            : s
+        )
+      );
+    } catch (e) {
+      console.error("Autofix error:", e);
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === activeId
+            ? {
+              ...s,
+              messages: [
+                ...s.messages,
+                { role: "assistant", content: "Autofix failed. Please try again." },
+              ],
+            }
+            : s
+        )
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Edit prompt handler
   const saveEditedPrompt = async (index) => {
     if (!editedPrompt.trim()) return;
@@ -280,6 +344,7 @@ function App() {
           exportJSON={exportJSON}
           exportText={exportText}
           loading={loading}
+        onAutofix={handleAutofix}
         />
 
         <ChatInput
