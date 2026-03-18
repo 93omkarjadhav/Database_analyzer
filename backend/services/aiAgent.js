@@ -2,7 +2,62 @@ const { ChatOpenAI } = require("@langchain/openai");
 const fs = require("fs");
 const csv = require("csv-parser");
 const { MongoClient } = require("mongodb");
-const { getMysqlConn, getPgPool, getSqliteDb,getBigQuery } = require("../config/db");
+const { getMysqlConn, getPgPool, getSqliteDb, getBigQuery } = require("../config/db");
+
+async function getMySqlSchemaString(mysqlConn) {
+  const [schemaRows] = await mysqlConn.query(`
+    SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE 
+    FROM information_schema.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE()
+    ORDER BY TABLE_NAME, ORDINAL_POSITION
+  `);
+  const schemaByTable = {};
+  for (const r of schemaRows) {
+    const t = r.TABLE_NAME;
+    if (!schemaByTable[t]) schemaByTable[t] = [];
+    schemaByTable[t].push(`${r.COLUMN_NAME} (${r.DATA_TYPE})`);
+  }
+  return Object.entries(schemaByTable)
+    .map(([t, cols]) => `${t}(${cols.join(", ")})`)
+    .join("; ");
+}
+
+async function autofixMySqlSql({ llm, mysqlConn, sql, errorMessage }) {
+  const FORBIDDEN = /DROP\s|DELETE\s|TRUNCATE\s/i;
+  if (sql.includes("FORBIDDEN_ACTION") || FORBIDDEN.test(sql)) {
+    return {
+      blocked: true,
+      reason: "⚠️ Restricted: You do not have permission to DROP or DELETE data.",
+    };
+  }
+
+  const schemaStr = await getMySqlSchemaString(mysqlConn);
+  const fixPrompt = `You are a MySQL expert.
+Goal: Fix the SQL query so it runs successfully.
+
+Rules:
+- Return ONLY SQL, no markdown, no explanations.
+- Use ONLY the columns listed in the schema.
+- Do NOT use DROP, DELETE, or TRUNCATE.
+- Prefer the minimal correction (keep intent the same).
+
+Schema: ${schemaStr}
+Broken SQL: ${sql}
+MySQL Error: ${errorMessage}
+`;
+
+  const fixRes = await llm.invoke(fixPrompt);
+  const fixedSql = fixRes.content.replace(/```sql|```/g, "").trim();
+
+  if (fixedSql.includes("FORBIDDEN_ACTION") || FORBIDDEN.test(fixedSql)) {
+    return {
+      blocked: true,
+      reason: "⚠️ Restricted: You do not have permission to DROP or DELETE data.",
+    };
+  }
+
+  return { blocked: false, fixedSql };
+}
 
 const getAiResponse = async (prompt, source, filePath) => {
   const llm = new ChatOpenAI({
@@ -105,6 +160,7 @@ const getAiResponse = async (prompt, source, filePath) => {
         content: `MySQL error: ${err.message}`,
         summary: "Error",
         query: sql,
+        error: err.message,
         dataframe: null,
         insights: null,
       };
@@ -500,4 +556,4 @@ if (source === "BigQuery") {
   };
 };
 
-module.exports = { getAiResponse };
+module.exports = { getAiResponse, autofixMySqlSql };
