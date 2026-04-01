@@ -1,19 +1,24 @@
-
-
 import React, { useState, useEffect, useMemo } from "react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import MessageList from "./components/MessageList";
 import ChatInput from "./components/ChatInput";
 import FullscreenModal from "./components/FullscreenModal";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
 import { uploadFile, sendChatMessage, autofixMySql } from "./utils/apiUtils";
 import { exportCSV, exportExcel, exportJSON, exportText } from "./utils/exportUtils";
 
 function App() {
   // State management
+  const [currentPage, setCurrentPage] = useState("login"); // 'login', 'signup', 'chat'
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
+
   const [sessions, setSessions] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [input, setInput] = useState("");
+  const [selectedImages, setSelectedImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -39,6 +44,25 @@ function App() {
   }, [isDarkMode]);
 
   const toggleTheme = () => setIsDarkMode((prev) => !prev);
+
+  // Navigation handlers
+  const handleLogin = (userData) => {
+    setIsAuthenticated(true);
+    setUser(userData);
+    setCurrentPage("chat");
+  };
+
+  const handleSignup = (userData) => {
+    setIsAuthenticated(true);
+    setUser(userData);
+    setCurrentPage("chat");
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setUser(null);
+    setCurrentPage("login");
+  };
 
   // Load sessions from localStorage on first render
   useEffect(() => {
@@ -119,21 +143,16 @@ function App() {
     const existingSession = sessions.find((s) => s.source === src);
 
     if (existingSession) {
-      // If switching to an existing session and the current one is completely empty, 
-      // remove the empty one to prevent sidebar clutter.
       if (activeChat.messages.length === 0 && activeChat.title === "New Session" && sessions.length > 1) {
         setSessions((prev) => prev.filter((s) => s.id !== activeId));
       }
       setActiveId(existingSession.id);
     } else {
-      // If no session exists for the new source, and the current one is completely empty, 
-      // just reuse it by changing its source.
       if (activeChat.messages.length === 0 && activeChat.title === "New Session") {
         setSessions((prev) =>
           prev.map((s) => (s.id === activeId ? { ...s, source: src } : s))
         );
       } else {
-        // Otherwise, create a brand new session for the selected source.
         const newId = Date.now().toString();
         const newSession = {
           id: newId,
@@ -149,7 +168,6 @@ function App() {
     }
   };
 
-  // File upload handler
   const handleFileUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file || !activeChat) return;
@@ -177,11 +195,17 @@ function App() {
     }
   };
 
-  // Send message handler
   const handleSend = async () => {
-    if (!input || loading || !activeChat) return;
+    if ((!input && selectedImages.length === 0) || loading || !activeChat) return;
     setLoading(true);
-    const userMsg = { role: "user", content: input };
+
+    const imageUrls = selectedImages.map(file => URL.createObjectURL(file));
+    const userMsg = {
+      role: "user",
+      content: input,
+      images: imageUrls
+    };
+
     const updatedMessages = [...activeChat.messages, userMsg];
     setSessions((prev) =>
       prev.map((s) =>
@@ -191,13 +215,14 @@ function App() {
             messages: updatedMessages,
             title:
               s.title === "New Session"
-                ? `${input.slice(0, 25)}...`
+                ? `${input.slice(0, 25) || "Image Message"}...`
                 : s.title,
           }
           : s
       )
     );
     setInput("");
+    setSelectedImages([]);
 
     try {
       const data = await sendChatMessage(
@@ -232,7 +257,6 @@ function App() {
     }
   };
 
-  // Autofix handler for MySQL SQL errors
   const handleAutofix = async (assistantMsg) => {
     if (!activeChat) return;
     if (activeChat.source !== "MySQL Database") return;
@@ -245,7 +269,6 @@ function App() {
     try {
       const fixRes = await autofixMySql(brokenSql, errMsg);
       if (fixRes.blocked) {
-        // Append a blocked response
         setSessions((prev) =>
           prev.map((s) =>
             s.id === activeId
@@ -266,7 +289,6 @@ function App() {
         return;
       }
 
-      // Show the fixed SQL in the input (like Copilot-style) and also append the execution result message
       if (fixRes.fixedSql) setInput(fixRes.fixedSql);
 
       setSessions((prev) =>
@@ -296,7 +318,6 @@ function App() {
     }
   };
 
-  // Edit prompt handler
   const saveEditedPrompt = async (index) => {
     if (!editedPrompt.trim()) return;
     const updatedMessages = activeChat.messages
@@ -332,12 +353,18 @@ function App() {
     }
   };
 
-  // Fullscreen handler
   const openFullscreen = (data) => {
     setFullscreenData(data);
   };
 
-  // No active chat - show create session button
+  // Render logic
+  if (currentPage === "login") {
+    return <LoginPage onLogin={handleLogin} onNavigateToSignup={() => setCurrentPage("signup")} />;
+  }
+  if (currentPage === "signup") {
+    return <SignupPage onSignup={handleSignup} onNavigateToLogin={() => setCurrentPage("login")} />;
+  }
+
   if (!activeChat) {
     return (
       <div className="flex h-screen items-center justify-center bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100">
@@ -371,7 +398,13 @@ function App() {
       />
 
       <div className="relative flex flex-1 flex-col bg-white dark:bg-slate-950">
-        <Header activeChat={activeChat} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+        <Header
+          activeChat={activeChat}
+          isDarkMode={isDarkMode}
+          toggleTheme={toggleTheme}
+          onLogout={handleLogout}
+          user={user}
+        />
 
         <MessageList
           messages={activeChat.messages}
@@ -388,7 +421,7 @@ function App() {
           exportJSON={exportJSON}
           exportText={exportText}
           loading={loading}
-        onAutofix={handleAutofix}
+          onAutofix={handleAutofix}
         />
 
         <ChatInput
@@ -397,6 +430,8 @@ function App() {
           handleSend={handleSend}
           loading={loading}
           activeChat={activeChat}
+          selectedImages={selectedImages}
+          setSelectedImages={setSelectedImages}
         />
       </div>
 

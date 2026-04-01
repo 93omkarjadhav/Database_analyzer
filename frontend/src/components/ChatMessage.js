@@ -66,19 +66,34 @@ function ChatMessage({
                   className="flex-1 rounded bg-slate-50 dark:bg-slate-900 p-2 text-sm outline-none"
                 />
               ) : (
-                <>
-                  <p className="flex-1">{m.content}</p>
-                  <button
-                    onClick={() => {
-                      setEditingMessageIndex(index);
-                      setEditedPrompt(m.content);
-                    }}
-                    className="text-slate-500 dark:text-slate-400 hover:text-blue-400"
-                    aria-label="Edit prompt"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                </>
+                <div className="flex-1 space-y-3">
+                  {m.images && m.images.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {m.images.map((img, idx) => (
+                        <div key={idx} className="relative group cursor-pointer overflow-hidden rounded-xl ring-1 ring-slate-200 dark:ring-slate-700 shadow-sm transition hover:ring-rose-500" onClick={() => openFullscreen({ type: 'image', url: img })}>
+                          <img
+                            src={img}
+                            alt={`user-upload-${idx}`}
+                            className="h-40 w-40 object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-start gap-2">
+                    {m.content && <p className="flex-1">{m.content}</p>}
+                    <button
+                      onClick={() => {
+                        setEditingMessageIndex(index);
+                        setEditedPrompt(m.content);
+                      }}
+                      className="text-slate-500 dark:text-slate-400 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Edit prompt"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           )}
