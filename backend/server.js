@@ -3,11 +3,27 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const fs = require('fs');
 const path = require('path');
+const mongoose = require("mongoose");
 const { connectDatabases } = require('./config/db');
 const { getAiResponse, autofixMySqlSql } = require('./services/aiAgent');
 const multer = require('multer');
+const authRoutes = require("./routes/authRoutes");
 
 dotenv.config();
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+// DB
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB Connected"))
+  .catch(err => console.log(err));
+
+// Routes
+app.use("/api/auth", authRoutes);
+
 
 // Ensure upload directory exists
 const uploadDir = path.join(__dirname, 'temp_data');
@@ -16,10 +32,6 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 const upload = multer({ dest: uploadDir });
-
-const app = express();
-app.use(cors());
-app.use(express.json());
 
 // Initialize DBs (MySQL, Postgres, Mongo)
 connectDatabases();

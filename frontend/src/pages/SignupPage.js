@@ -7,11 +7,26 @@ function SignupPage({ onSignup, onNavigateToLogin }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        // In a real app, you'd call your API here
-        onSignup({ name, email });
-    };
+    const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  const res = await fetch("http://localhost:5000/api/auth/signup", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ name, email, password })
+  });
+
+  const data = await res.json();
+
+  if (res.ok) {
+    localStorage.setItem("token", data.token);
+    onSignup(data.user);
+  } else {
+    alert(data.message);
+  }
+};
 
     return (
         <div className="flex h-screen w-full items-center justify-center bg-[#020617] p-4">
