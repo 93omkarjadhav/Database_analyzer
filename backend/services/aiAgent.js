@@ -9,7 +9,7 @@ async function getMySqlSchemaString(mysqlConn) {
     SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE 
     FROM information_schema.COLUMNS 
     WHERE TABLE_SCHEMA = DATABASE()
-    ORDER BY TABLE_NAME, ORDINAL_POSITION
+    ORDER BY TABLE_NAME, ORDINAL_POSITION 
   `);
   const schemaByTable = {};
   for (const r of schemaRows) {
