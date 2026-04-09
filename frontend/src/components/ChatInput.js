@@ -87,13 +87,41 @@ function ChatInput({
                     : "Analyze your data source..."
                 }
               />
-              <button
-                onClick={handleSend}
-                disabled={loading || (!input.trim() && selectedImages.length === 0)}
-                className="absolute bottom-1.5 right-2 inline-flex h-9 items-center justify-center rounded-full border border-rose-500/60 bg-rose-500 px-5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition-all hover:bg-rose-400 disabled:border-slate-300 dark:disabled:border-slate-700 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-500 active:scale-95"
-              >
-                <Send className="mr-2 h-4 w-4" /> Send
-              </button>
+             <button
+  onClick={handleSend}
+  disabled={loading || (!input.trim() && selectedImages.length === 0)}
+  className="
+    absolute md:absolute
+    bottom-2 right-2
+    md:bottom-1.5 md:right-2
+
+    inline-flex items-center justify-center
+
+    h-10 md:h-9
+    px-4 md:px-5
+
+    text-sm md:text-sm
+
+    rounded-full
+    border border-rose-500/60
+    bg-rose-500
+    text-white
+    shadow-lg shadow-rose-500/20
+
+    transition-all hover:bg-rose-400
+    active:scale-95
+
+    disabled:border-slate-300
+    dark:disabled:border-slate-700
+    disabled:bg-slate-100
+    dark:disabled:bg-slate-800
+    disabled:text-slate-400
+    dark:disabled:text-slate-500
+  "
+>
+  <Send className="mr-1 md:mr-2 h-4 w-4" />
+  <span className="hidden md:inline">Send</span>
+</button>
             </div>
           </div>
         </div>

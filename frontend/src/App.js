@@ -379,7 +379,7 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-50">
+    <div className="flex h-screen flex-col md:flex-row bg-slate-950 text-slate-50">
       <Sidebar
         sessions={sessions}
         activeId={activeId}

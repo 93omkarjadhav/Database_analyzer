@@ -21,9 +21,12 @@ function SignupPage({ onSignup, onNavigateToLogin }) {
   const data = await res.json();
 
   if (res.ok) {
-    localStorage.setItem("token", data.token);
-    onSignup(data.user);
-  } else {
+  localStorage.setItem("token", data.token);
+  onSignup(data.user);
+
+  // 👉 ADD THIS
+  onNavigateToLogin();
+} else {
     alert(data.message);
   }
 };

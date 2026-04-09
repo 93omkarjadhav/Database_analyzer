@@ -19,7 +19,7 @@ function MessageList({
   onAutofix,
 }) {
   return (
-    <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6 pb-32 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+    <div className="flex-1 space-y-6 overflow-auto px-3 md:px-6 py-4 pb-32 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
       {messages.map((m, i) => (
         <ChatMessage
           key={i}

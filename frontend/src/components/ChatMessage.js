@@ -38,7 +38,7 @@ const [chartType, setChartType] = useState("");
     <div
       className={`flex w-full ${m.role === "user" ? "justify-end" : "justify-start"}`}
     >
-      <div className={`relative max-w-[85%] border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-5 shadow-sm transition-all hover:shadow-md ${m.role === "user" ? "rounded-[32px] rounded-br-[8px]" : "rounded-[32px] rounded-bl-[8px]"
+      <div className={`relative w-full md:max-w-[80%] border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-5 shadow-sm transition-all hover:shadow-md ${m.role === "user" ? "rounded-[32px] rounded-br-[8px]" : "rounded-[32px] rounded-bl-[8px]"
         }`}>
         {m.role === "assistant" && (
           <ExportMenu
