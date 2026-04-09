@@ -379,7 +379,7 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen flex-col md:flex-row bg-slate-950 text-slate-50">
+    <div className="flex h-[100dvh] w-full max-w-full overflow-x-hidden flex-col md:flex-row bg-slate-950 text-slate-50">
       <Sidebar
         sessions={sessions}
         activeId={activeId}
@@ -397,7 +397,7 @@ function App() {
         handleFileUpload={handleFileUpload}
       />
 
-      <div className="relative flex flex-1 flex-col bg-white dark:bg-slate-950">
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden bg-white dark:bg-slate-950">
         <Header
           activeChat={activeChat}
           isDarkMode={isDarkMode}

@@ -5,17 +5,17 @@ import ProfileMenu from "./ProfileMenu";
 
 function Header({ activeChat, isDarkMode, toggleTheme, onLogout }) {
   return (
-    <div className="border-slate-200 dark:border-slate-800 px-6 py-4 flex justify-between items-start">
-      <div>
+    <div className="flex items-center justify-between gap-3 border-slate-200 px-3 py-3 md:px-6 md:py-4 dark:border-slate-800">
+      <div className="min-w-0 flex-1">
         <h1 className="flex items-center gap-3 font-['Outfit'] select-none">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-rose-600 to-indigo-600 font-black text-white shadow-lg shadow-rose-500/20">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-rose-600 to-indigo-600 font-black text-white shadow-lg shadow-rose-500/20 md:h-10 md:w-10">
             SQL
           </div>
-          <div className="flex flex-col">
-            <span className="text-2xl font-black tracking-tight leading-none bg-gradient-to-r from-slate-900 via-slate-800 to-rose-600 dark:from-white dark:via-slate-200 dark:to-rose-500 bg-clip-text text-transparent">
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate bg-gradient-to-r from-slate-900 via-slate-800 to-rose-600 bg-clip-text text-xl font-black leading-none tracking-tight text-transparent dark:from-white dark:via-slate-200 dark:to-rose-500 md:text-2xl">
               Sql Agent
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-600">
+            <span className="hidden text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-600 sm:inline">
               Intelligence Multi-Storage
             </span>
           </div>
@@ -29,7 +29,7 @@ function Header({ activeChat, isDarkMode, toggleTheme, onLogout }) {
         )}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-2 md:gap-3">
         <ProfileMenu onLogout={onLogout} />
 
         <button

@@ -24,8 +24,8 @@ function ChatInput({
   };
 
   return (
-    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-white via-white/95 dark:from-slate-950 dark:via-slate-950/95 to-transparent pb-6 pt-10">
-      <div className="relative mx-auto w-full max-w-4xl px-4">
+    <div className="sticky inset-x-0 bottom-0 z-20 bg-gradient-to-t from-white via-white/95 dark:from-slate-950 dark:via-slate-950/95 to-transparent pb-3 md:pb-6 pt-6 md:pt-10">
+      <div className="relative mx-auto w-full max-w-4xl px-3 md:px-4">
         <div className="relative flex w-full flex-col">
           {/* Image Previews */}
           {selectedImages && selectedImages.length > 0 && (
@@ -64,7 +64,7 @@ function ChatInput({
               <button
                 type="button"
                 onClick={() => fileInputRef.current.click()}
-                className="absolute left-2 bottom-1.5 group flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 transition-all hover:bg-slate-300 dark:hover:bg-slate-700 hover:text-rose-500 shadow-sm border border-slate-300 dark:border-slate-700/50 active:scale-95 z-10"
+                className="absolute left-2 bottom-1.5 group flex h-8 w-8 md:h-9 md:w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 transition-all hover:bg-slate-300 dark:hover:bg-slate-700 hover:text-rose-500 shadow-sm border border-slate-300 dark:border-slate-700/50 active:scale-95 z-10"
                 title="Add images"
               >
                 <Plus className="h-5 w-5 transition-transform group-hover:rotate-90" />
@@ -80,7 +80,7 @@ function ChatInput({
                     handleSend();
                   }
                 }}
-                className="flex max-h-48 w-full resize-none rounded-[32px] border border-slate-300 dark:border-slate-700 bg-slate-50/90 dark:bg-slate-900/90 py-3 pl-14 pr-[110px] text-sm text-slate-900 dark:text-slate-50 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500 shadow-sm transition-all duration-200"
+                className="flex max-h-48 w-full resize-none rounded-[28px] md:rounded-[32px] border border-slate-300 dark:border-slate-700 bg-slate-50/90 dark:bg-slate-900/90 py-3 pl-12 md:pl-14 pr-[88px] md:pr-[110px] text-sm text-slate-900 dark:text-slate-50 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500 shadow-sm transition-all duration-200"
                 placeholder={
                   activeChat.source === "BigQuery"
                     ? "Run analytics on BigQuery Warehouse..."
@@ -120,7 +120,7 @@ function ChatInput({
   "
 >
   <Send className="mr-1 md:mr-2 h-4 w-4" />
-  <span className="hidden md:inline">Send</span>
+  <span className="inline">Send</span>
 </button>
             </div>
           </div>

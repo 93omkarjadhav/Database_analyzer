@@ -36,9 +36,9 @@ const [chartType, setChartType] = useState("");
 
   return (
     <div
-      className={`flex w-full ${m.role === "user" ? "justify-end" : "justify-start"}`}
+      className={`flex w-full min-w-0 ${m.role === "user" ? "justify-end" : "justify-start"}`}
     >
-      <div className={`relative w-full md:max-w-[80%] border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-5 shadow-sm transition-all hover:shadow-md ${m.role === "user" ? "rounded-[32px] rounded-br-[8px]" : "rounded-[32px] rounded-bl-[8px]"
+      <div className={`relative w-full min-w-0 md:max-w-[80%] border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-5 shadow-sm transition-all hover:shadow-md ${m.role === "user" ? "rounded-[32px] rounded-br-[8px]" : "rounded-[32px] rounded-bl-[8px]"
         }`}>
         {m.role === "assistant" && (
           <ExportMenu
@@ -182,7 +182,7 @@ const [chartType, setChartType] = useState("");
           </div>
         )} */}
 {m.dataframe && m.dataframe.length > 0 && (
-  <div className="mt-3 w-full overflow-auto rounded-md border border-slate-700 bg-slate-900/80">
+  <div className="mt-3 w-full max-w-full overflow-auto rounded-md border border-slate-700 bg-slate-900/80">
     <table className="w-full min-w-[600px] text-left text-[11px] text-slate-100">
       <thead className="bg-slate-900 uppercase tracking-tighter text-slate-400">
         <tr>

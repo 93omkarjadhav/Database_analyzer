@@ -21,7 +21,7 @@ function Sidebar({
   handleFileUpload,
 }) {
   return (
-    <div className="flex w-[320px] flex-col border-r border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 p-4 backdrop-blur">
+    <div className="flex w-full md:w-[320px] md:min-w-[320px] flex-col border-r border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 p-4 backdrop-blur md:max-h-none max-h-[38vh] md:overflow-visible overflow-auto">
       <div className="mb-6 flex items-center gap-3 px-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500">
           <Layout size={18} />
