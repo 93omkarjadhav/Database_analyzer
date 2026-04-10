@@ -23,11 +23,11 @@ async function getMySqlSchemaString(mysqlConn) {
 }
 
 async function autofixMySqlSql({ llm, mysqlConn, sql, errorMessage }) {
-  const FORBIDDEN = /DROP\s|DELETE\s|TRUNCATE\s/i;
+  const FORBIDDEN = /DROP\s|DELETE\s|TRUNCATE\s|ALTER\s+TABLE.*RENAME|ALTER\s+TABLE.*DROP/i;
   if (sql.includes("FORBIDDEN_ACTION") || FORBIDDEN.test(sql)) {
     return {
       blocked: true,
-      reason: "⚠️ Restricted: You do not have permission to DROP or DELETE data.",
+      reason: "🚫 Access Denied: Destructive operations like DROP, DELETE, TRUNCATE, or table renaming are prohibited for security and data integrity reasons.",
     };
   }
 
@@ -38,7 +38,7 @@ Goal: Fix the SQL query so it runs successfully.
 Rules:
 - Return ONLY SQL, no markdown, no explanations.
 - Use ONLY the columns listed in the schema.
-- Do NOT use DROP, DELETE, or TRUNCATE.
+- Do NOT use DROP, DELETE, TRUNCATE, or ALTER TABLE RENAME.
 - Prefer the minimal correction (keep intent the same).
 
 Schema: ${schemaStr}
@@ -52,7 +52,7 @@ MySQL Error: ${errorMessage}
   if (fixedSql.includes("FORBIDDEN_ACTION") || FORBIDDEN.test(fixedSql)) {
     return {
       blocked: true,
-      reason: "⚠️ Restricted: You do not have permission to DROP or DELETE data.",
+      reason: "🚫 Access Denied: Destructive operations like DROP, DELETE, TRUNCATE, or table renaming are prohibited for security and data integrity reasons.",
     };
   }
 
@@ -122,7 +122,10 @@ const mysqlConn = getMysqlConn();
   const bigqueryClient = getBigQuery();
   // --- 1. MySQL Logic: realtime CREATE/INSERT/UPDATE/SELECT, block DROP/DELETE ---
   if (source === "MySQL Database" && mysqlConn) {
-    const FORBIDDEN = /DROP\s|DELETE\s|TRUNCATE\s/i;
+    const FORBIDDEN = /DROP\s|DELETE\s|TRUNCATE\s|ALTER\s+TABLE.*RENAME|ALTER\s+TABLE.*DROP/i;
+
+    // Check prompt for destructive intent
+    const destructivePrompt = /drop.*table|delete.*table|truncate.*table|remove.*table|destroy.*table|rename.*table/i.test(prompt.toLowerCase());
 
     const isLikelyRawSql = (text) => {
       const t = text.trim().toUpperCase();
@@ -155,16 +158,16 @@ const mysqlConn = getMysqlConn();
         .map(([t, cols]) => `${t}(${cols.join(", ")})`)
         .join("; ");
       const sqlRes = await llm.invoke(
-        `You are a MySQL expert. Use ONLY the columns listed. Schema: ${schemaStr}. User question: ${prompt}. Return ONLY valid MySQL SQL, no markdown. Do NOT use DROP, DELETE, or TRUNCATE.`,
+        `You are a MySQL expert. Use ONLY the columns listed. Schema: ${schemaStr}. User question: ${prompt}. Return ONLY valid MySQL SQL, no markdown. Do NOT use DROP, DELETE, TRUNCATE, or ALTER TABLE RENAME.`,
       );
       sql = sqlRes.content.replace(/```sql|```/g, "").trim();
     }
 
-    if (sql.includes("FORBIDDEN_ACTION") || FORBIDDEN.test(sql)) {
+    if (destructivePrompt || sql.includes("FORBIDDEN_ACTION") || FORBIDDEN.test(sql)) {
      return {
   role: "assistant",
-  content: "⚠️ Restricted: You do not have permission to DROP or DELETE data.",
-  summary: "Command Blocked",
+  content: "🚫 Access Denied: Destructive operations like DROP, DELETE, TRUNCATE, or table renaming are prohibited for security and data integrity reasons.",
+  summary: "🚫 Access Denied Command Blocked",
   query: null,
   dataframe: null,
   insights: null,
@@ -351,10 +354,12 @@ User question: "${prompt}".
 3. Return ONLY a single JSON object with EXACTLY these keys:
    - "summary": a natural-language explanation of the result.
    - "data": the aggregation pipeline array to run (e.g. [{"$match": {...}}, {"$project": {...}}]).
+4. Do not mention aggregation pipelines, query generation, JSON syntax, or implementation details in the summary.
+5. Make the summary short and user-facing, e.g. "I found a total of 4 products in the collection." or "Returned the names of 4 products.".
 
 Valid example:
 {
-  "summary": "Found all products in the Food category.",
+  "summary": "Found all products in the Food category and returned their full details.",
   "data": [
     { "$match": { "category": "Food" } }
   ]
@@ -392,11 +397,61 @@ Valid example:
    // ✅ store last result
 lastDataFrame = result;
 
+const countField =
+  result.length === 1 && result[0]
+    ? Object.keys(result[0]).find((key) => /count|total|num/i.test(key))
+    : null;
+const countValue = countField ? result[0][countField] : null;
+const hasNameRequest = /name|names/i.test(prompt);
+const hasCountRequest = /how many|total|count/i.test(prompt);
+
+const userFriendlySummary = (() => {
+  if (hasCountRequest && result.length === 1 && result[0]) {
+    const numericField =
+      countField ||
+      Object.keys(result[0]).find((key) => typeof result[0][key] === "number");
+    const numericValue = numericField ? result[0][numericField] : null;
+    if (numericValue != null && typeof numericValue !== "object") {
+      const noun = /product/i.test(numericField)
+        ? "products"
+        : /record|item/i.test(numericField)
+        ? "records"
+        : "items";
+      return `I found a total of ${numericValue} ${noun} in the products collection.`;
+    }
+  }
+
+  if (hasNameRequest && result.length > 0 && result[0].name) {
+    return `Retrieved the names of ${result.length} products in the collection.`;
+  }
+
+  if (result.length === 0) {
+    return "No matching documents were found in the products collection.";
+  }
+
+  if (parsed.summary) {
+    const cleanedSummary = parsed.summary
+      .replace(/aggregation pipeline/gi, "result")
+      .replace(/pipeline/gi, "result")
+      .replace(/query executed/gi, "result returned")
+      .replace(/returned a single document with/i, "returned")
+      .replace(/Document with/i, "Returned")
+      .trim();
+    if (cleanedSummary && cleanedSummary.length < 200) {
+      return cleanedSummary.replace(/\s+/g, " ");
+    }
+  }
+
+  return `Found ${result.length} document(s) in the products collection.`;
+})();
+
 return {
   role: "assistant",
   content: parsed.summary || "Query executed on MongoDB.",
+  summary: userFriendlySummary,
   dataframe: result,
   jsonData: result,
+  insights: parsed.summary || (result.length ? `Returned ${result.length} document(s).` : "No matching documents."),
   visualize: visualize,
   visualizeOnly: visualizeOnly,
   chart: chartType
@@ -512,7 +567,7 @@ lastDataFrame = filteredRows;
 
 resolve({
   role: "assistant",
-  summary: summary,
+  summary: `**Upload File** result: returned **${filteredRows.length}** row(s). ${summary}`,
   query: "CSV Data Analysis",
   dataframe: filteredRows,
   insights: insights,
@@ -634,14 +689,23 @@ lastDataFrame = rows;
 return { 
   role: "assistant", 
   content: `Analytical Query Executed: \`${sql}\``, 
+  summary: `**BigQuery** executed successfully. **${rows.length}** record(s) retrieved.`,
+  query: sql,
   dataframe: rows,
+  insights: rows.length ? `Total **${rows.length}** row(s) in the result.` : "No matching records.",
   visualize: visualize,
   visualizeOnly: visualizeOnly,
   chart: chartType
 };
     } catch (err) {
         // Handle common Sandbox errors gracefully
-        return { role: "assistant", content: `Warehouse Analytics Error: ${err.message}` };
+        return {
+          role: "assistant",
+          content: `Warehouse Analytics Error: ${err.message}`,
+          summary: `**BigQuery** error: ${err.message}`,
+          query: sql,
+          dataframe: null,
+        };
     }
 }
   return {

@@ -69,6 +69,8 @@ app.post('/api/mysql/autofix', async (req, res) => {
         }
 
         const fixedSql = fix.fixedSql;
+        const errorSummary = String(errorMessage || 'Unknown SQL error').split('\n')[0];
+        const fixExplanation = `Autofix resolved this issue: "${errorSummary}". Updated query from "${sql}" to "${fixedSql}".`;
         const isSelect = /^\s*SELECT\s/i.test(fixedSql);
         if (isSelect) {
             const [data] = await mysqlConn.query(fixedSql);
@@ -76,10 +78,12 @@ app.post('/api/mysql/autofix', async (req, res) => {
                 blocked: false,
                 fixedSql,
                 role: "assistant",
-                summary: `Autofixed and executed successfully. ${data.length} record(s) retrieved.`,
+                summary: `Autofixed and executed successfully. ${data.length} record(s) retrieved. ${fixExplanation}`,
                 query: fixedSql,
                 dataframe: data,
-                insights: data.length ? `Total ${data.length} row(s) in the result.` : "No matching records.",
+                insights: data.length
+                    ? `Total ${data.length} row(s) in the result. ${fixExplanation}`
+                    : `No matching records. ${fixExplanation}`,
             });
         }
 
@@ -88,10 +92,10 @@ app.post('/api/mysql/autofix', async (req, res) => {
             blocked: false,
             fixedSql,
             role: "assistant",
-            summary: "Autofixed and executed successfully in MySQL Workbench.",
+            summary: `Autofixed and executed successfully in MySQL Workbench. ${fixExplanation}`,
             query: fixedSql,
             dataframe: [],
-            insights: "Done.",
+            insights: fixExplanation,
         });
     } catch (err) {
         console.error('Autofix route error:', err);
