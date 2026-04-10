@@ -24,6 +24,15 @@ function ChatMessage({
   const m = message;
   const [fixing, setFixing] = useState(false);
 
+  const renderSummaryWithBold = (text) => {
+    const s = String(text ?? "");
+    if (!s.includes("**")) return s;
+    const parts = s.split("**");
+    return parts.map((part, idx) =>
+      idx % 2 === 1 ? <strong key={idx} className="font-semibold">{part}</strong> : <React.Fragment key={idx}>{part}</React.Fragment>
+    );
+  };
+
   const showAutofix = useMemo(() => {
     if (m.role !== "assistant") return false;
     if (!m.query) return false;
@@ -39,7 +48,17 @@ function ChatMessage({
       content.includes("you have an error in your sql syntax") ||
       errorText.length > 0;
 
-    return hasErrorSignal;
+    const isAutofixSuccess =
+      summary.includes("autofixed and executed successfully") ||
+      summary.includes("autofix resolved") ||
+      summary.includes("autofix succeeded") ||
+      summary.includes("autofix completed") ||
+      content.includes("autofixed and executed successfully") ||
+      content.includes("autofix resolved") ||
+      content.includes("autofix succeeded") ||
+      content.includes("autofix completed");
+
+    return hasErrorSignal && !isAutofixSuccess;
   }, [m]);
 
 const [chartType, setChartType] = useState("");
@@ -117,7 +136,7 @@ const [chartType, setChartType] = useState("");
               <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
                 Summary
               </div>
-              <p>{m.summary}</p>
+              <p>{renderSummaryWithBold(m.summary)}</p>
             </div>
           )}
 

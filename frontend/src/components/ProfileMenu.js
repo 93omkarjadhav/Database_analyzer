@@ -5,7 +5,11 @@ function ProfileMenu({ onLogout, user }) {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef(null);
 
-    const displayName = user?.name || "Guest User";
+    const displayName =
+        user?.name ||
+        user?.username ||
+        (user?.email ? user.email.split("@")[0] : "") ||
+        "Guest User";
 
     // Close menu when clicking outside
     useEffect(() => {

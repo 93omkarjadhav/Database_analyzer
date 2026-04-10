@@ -3,7 +3,7 @@ import { Sun, Moon } from "lucide-react";
 
 import ProfileMenu from "./ProfileMenu";
 
-function Header({ activeChat, isDarkMode, toggleTheme, onLogout }) {
+function Header({ activeChat, isDarkMode, toggleTheme, onLogout, user }) {
   return (
     <div className="flex items-center justify-between gap-3 border-slate-200 px-3 py-3 md:px-6 md:py-4 dark:border-slate-800">
       <div className="min-w-0 flex-1">
@@ -30,7 +30,7 @@ function Header({ activeChat, isDarkMode, toggleTheme, onLogout }) {
       </div>
 
       <div className="flex shrink-0 items-center gap-2 md:gap-3">
-        <ProfileMenu onLogout={onLogout} />
+        <ProfileMenu onLogout={onLogout} user={user} />
 
         <button
           onClick={toggleTheme}

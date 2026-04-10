@@ -83,19 +83,9 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (currentPath === "/login" && hasAuthToken) {
-      window.history.replaceState({}, "", "/app");
-      setCurrentPath("/app");
-      return;
-    }
-
-    if (currentPath === "/signup" && hasAuthToken) {
-      window.history.replaceState({}, "", "/app");
-      setCurrentPath("/app");
-      return;
-    }
-
-    if (currentPath === "/app" && !hasAuthToken) {
+    // Require explicit login (isAuthenticated) before allowing /app
+    // Token presence alone should NOT bypass the login screen.
+    if (currentPath === "/app" && !isAuthenticated) {
       window.history.replaceState({}, "", "/login");
       setCurrentPath("/login");
       return;
@@ -105,7 +95,7 @@ function App() {
       window.history.replaceState({}, "", "/");
       setCurrentPath("/");
     }
-  }, [currentPath, hasAuthToken]);
+  }, [currentPath, hasAuthToken, isAuthenticated]);
 
   // Load sessions from localStorage on first render
   useEffect(() => {
@@ -321,7 +311,7 @@ function App() {
                   ...s.messages,
                   {
                     role: "assistant",
-                    summary: "Command Blocked",
+                    summary: "🚫 Access Denied Command Blocked",
                     content: fixRes.reason,
                   },
                 ],

@@ -51,7 +51,7 @@ function SignupPage({ onSignup, onNavigateToLogin }) {
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    placeholder="Karan Johar"
+                                    placeholder="Username"
                                     className="w-full rounded-2xl border border-slate-800 bg-slate-950/50 py-3 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none ring-offset-slate-950 transition-all focus:border-rose-500/50 focus:ring-2 focus:ring-rose-500/20"
                                     required
                                 />
@@ -68,7 +68,7 @@ function SignupPage({ onSignup, onNavigateToLogin }) {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="karan@company.com"
+                                    placeholder="user@company.com"
                                     className="w-full rounded-2xl border border-slate-800 bg-slate-950/50 py-3 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none ring-offset-slate-950 transition-all focus:border-rose-500/50 focus:ring-2 focus:ring-rose-500/20"
                                     required
                                 />
