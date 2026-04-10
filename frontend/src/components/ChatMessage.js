@@ -27,9 +27,19 @@ function ChatMessage({
   const showAutofix = useMemo(() => {
     if (m.role !== "assistant") return false;
     if (!m.query) return false;
-    if (!m.summary || m.summary !== "Error") return false;
-    // Only show for MySQL errors
-    return typeof m.content === "string" && m.content.startsWith("MySQL error:");
+    const summary = String(m.summary || "").toLowerCase();
+    const content = String(m.content || "").toLowerCase();
+    const errorText = String(m.error || "").toLowerCase();
+
+    // Show Autofix for MySQL query failures even if response wording varies
+    const hasErrorSignal =
+      summary.includes("error") ||
+      content.includes("mysql error") ||
+      content.includes("sql syntax") ||
+      content.includes("you have an error in your sql syntax") ||
+      errorText.length > 0;
+
+    return hasErrorSignal;
   }, [m]);
 
 const [chartType, setChartType] = useState("");
