@@ -58,6 +58,13 @@ MySQL Error: ${errorMessage}
 
   return { blocked: false, fixedSql };
 }
+
+function extractNumberFromText(text) {
+  const match = String(text || "").match(/\b(\d+)\b/);
+  if (!match) return null;
+  const value = parseInt(match[1], 10);
+  return Number.isNaN(value) ? null : value;
+}
 //const {  getPgPool, getSqliteDb,getBigQuery } = require("../config/db");
 let lastDataFrame = null;
 
