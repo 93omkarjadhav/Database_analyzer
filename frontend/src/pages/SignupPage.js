@@ -23,9 +23,6 @@ function SignupPage({ onSignup, onNavigateToLogin }) {
   if (res.ok) {
   localStorage.setItem("token", data.token);
   onSignup(data.user);
-
-  // 👉 ADD THIS
-  onNavigateToLogin();
 } else {
     alert(data.message);
   }

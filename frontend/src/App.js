@@ -4,14 +4,17 @@ import Header from "./components/Header";
 import MessageList from "./components/MessageList";
 import ChatInput from "./components/ChatInput";
 import FullscreenModal from "./components/FullscreenModal";
+import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import { uploadFile, sendChatMessage, autofixMySql } from "./utils/apiUtils";
 import { exportCSV, exportExcel, exportJSON, exportText } from "./utils/exportUtils";
 
 function App() {
-  // State management
-  const [currentPage, setCurrentPage] = useState("login"); // 'login', 'signup', 'chat'
+  const getCurrentPath = () => window.location.pathname || "/";
+  const [currentPath, setCurrentPath] = useState(getCurrentPath);
+  const hasAuthToken = Boolean(localStorage.getItem("token"));
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
 
@@ -49,20 +52,60 @@ function App() {
   const handleLogin = (userData) => {
     setIsAuthenticated(true);
     setUser(userData);
-    setCurrentPage("chat");
+    window.history.pushState({}, "", "/app");
+    setCurrentPath("/app");
   };
 
   const handleSignup = (userData) => {
     setIsAuthenticated(true);
     setUser(userData);
-    setCurrentPage("chat");
+    window.history.pushState({}, "", "/app");
+    setCurrentPath("/app");
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
     setUser(null);
-    setCurrentPage("login");
+    localStorage.removeItem("token");
+    window.history.pushState({}, "", "/");
+    setCurrentPath("/");
   };
+
+  const navigateTo = (path) => {
+    window.history.pushState({}, "", path);
+    setCurrentPath(path);
+  };
+
+  useEffect(() => {
+    const handlePopState = () => setCurrentPath(getCurrentPath());
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (currentPath === "/login" && hasAuthToken) {
+      window.history.replaceState({}, "", "/app");
+      setCurrentPath("/app");
+      return;
+    }
+
+    if (currentPath === "/signup" && hasAuthToken) {
+      window.history.replaceState({}, "", "/app");
+      setCurrentPath("/app");
+      return;
+    }
+
+    if (currentPath === "/app" && !hasAuthToken) {
+      window.history.replaceState({}, "", "/login");
+      setCurrentPath("/login");
+      return;
+    }
+
+    if (!["/", "/login", "/signup", "/app"].includes(currentPath)) {
+      window.history.replaceState({}, "", "/");
+      setCurrentPath("/");
+    }
+  }, [currentPath, hasAuthToken]);
 
   // Load sessions from localStorage on first render
   useEffect(() => {
@@ -357,28 +400,16 @@ function App() {
     setFullscreenData(data);
   };
 
-  // Render logic
-  if (currentPage === "login") {
-    return <LoginPage onLogin={handleLogin} onNavigateToSignup={() => setCurrentPage("signup")} />;
-  }
-  if (currentPage === "signup") {
-    return <SignupPage onSignup={handleSignup} onNavigateToLogin={() => setCurrentPage("login")} />;
-  }
-
-  if (!activeChat) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100">
-        <button
-          onClick={createNewChat}
-          className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
-        >
-          Create first session
-        </button>
-      </div>
-    );
-  }
-
-  return (
+  const chatPage = !activeChat ? (
+    <div className="flex h-screen items-center justify-center bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100">
+      <button
+        onClick={createNewChat}
+        className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
+      >
+        Create first session
+      </button>
+    </div>
+  ) : (
     <div className="flex h-[100dvh] w-full max-w-full overflow-x-hidden flex-col md:flex-row bg-slate-950 text-slate-50">
       <Sidebar
         sessions={sessions}
@@ -441,6 +472,39 @@ function App() {
       />
     </div>
   );
+
+  if (currentPath === "/") {
+    return (
+      <DashboardPage
+        onGetStarted={() => navigateTo("/signup")}
+        onSignIn={() => navigateTo("/login")}
+      />
+    );
+  }
+
+  if (currentPath === "/login") {
+    return (
+      <LoginPage
+        onLogin={handleLogin}
+        onNavigateToSignup={() => navigateTo("/signup")}
+      />
+    );
+  }
+
+  if (currentPath === "/signup") {
+    return (
+      <SignupPage
+        onSignup={handleSignup}
+        onNavigateToLogin={() => navigateTo("/login")}
+      />
+    );
+  }
+
+  if (currentPath === "/app") {
+    return chatPage;
+  }
+
+  return null;
 }
 
 export default App;
