@@ -7,6 +7,10 @@ import FullscreenModal from "./components/FullscreenModal";
 import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
+import ProductPage from "./pages/ProductPage";
+import EnterprisePage from "./pages/EnterprisePage";
+import PricingPage from "./pages/PricingPage";
+import ResourcesPage from "./pages/ResourcesPage";
 import { uploadFile, sendChatMessage, autofixMySql } from "./utils/apiUtils";
 import { exportCSV, exportExcel, exportJSON, exportText } from "./utils/exportUtils";
 
@@ -33,22 +37,19 @@ function App() {
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem("theme");
-    return saved === "light" ? false : true;
+    if (saved === "dark") return true;
+    if (saved === "light") return false;
+    return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? true;
   });
 
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
+    document.documentElement.classList.toggle("dark", isDarkMode);
+    document.documentElement.style.colorScheme = isDarkMode ? "dark" : "light";
+    localStorage.setItem("theme", isDarkMode ? "dark" : "light");
   }, [isDarkMode]);
 
   const toggleTheme = () => setIsDarkMode((prev) => !prev);
 
-  // Navigation handlers
   const handleLogin = (userData) => {
     setIsAuthenticated(true);
     setUser(userData);
@@ -74,6 +75,7 @@ function App() {
   const navigateTo = (path) => {
     window.history.pushState({}, "", path);
     setCurrentPath(path);
+    window.scrollTo(0, 0);
   };
 
   useEffect(() => {
@@ -83,21 +85,18 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Require explicit login (isAuthenticated) before allowing /app
-    // Token presence alone should NOT bypass the login screen.
     if (currentPath === "/app" && !isAuthenticated) {
       window.history.replaceState({}, "", "/login");
       setCurrentPath("/login");
       return;
     }
 
-    if (!["/", "/login", "/signup", "/app"].includes(currentPath)) {
+    if (!["/", "/login", "/signup", "/app", "/product", "/enterprise", "/pricing", "/resources"].includes(currentPath)) {
       window.history.replaceState({}, "", "/");
       setCurrentPath("/");
     }
   }, [currentPath, hasAuthToken, isAuthenticated]);
 
-  // Load sessions from localStorage on first render
   useEffect(() => {
     const stored = localStorage.getItem("retail-ai-sessions");
     if (stored) {
@@ -120,20 +119,17 @@ function App() {
     }
   }, []);
 
-  // Persist sessions to localStorage
   useEffect(() => {
     if (sessions.length) {
       localStorage.setItem("retail-ai-sessions", JSON.stringify(sessions));
     }
   }, [sessions]);
 
-  // Memoized active chat
   const activeChat = useMemo(
     () => sessions.find((s) => s.id === activeId),
     [sessions, activeId]
   );
 
-  // Session management functions
   const createNewChat = () => {
     const newId = Date.now().toString();
     const currentSource = activeChat ? activeChat.source : "MySQL Database";
@@ -176,7 +172,11 @@ function App() {
     const existingSession = sessions.find((s) => s.source === src);
 
     if (existingSession) {
-      if (activeChat.messages.length === 0 && activeChat.title === "New Session" && sessions.length > 1) {
+      if (
+        activeChat.messages.length === 0 &&
+        activeChat.title === "New Session" &&
+        sessions.length > 1
+      ) {
         setSessions((prev) => prev.filter((s) => s.id !== activeId));
       }
       setActiveId(existingSession.id);
@@ -211,11 +211,11 @@ function App() {
         prev.map((s) =>
           s.id === activeId
             ? {
-              ...s,
-              filePath: data.filePath,
-              fileName: data.fileName,
-              source: "Upload File",
-            }
+                ...s,
+                filePath: data.filePath,
+                fileName: data.fileName,
+                source: "Upload File",
+              }
             : s
         )
       );
@@ -232,11 +232,11 @@ function App() {
     if ((!input && selectedImages.length === 0) || loading || !activeChat) return;
     setLoading(true);
 
-    const imageUrls = selectedImages.map(file => URL.createObjectURL(file));
+    const imageUrls = selectedImages.map((file) => URL.createObjectURL(file));
     const userMsg = {
       role: "user",
       content: input,
-      images: imageUrls
+      images: imageUrls,
     };
 
     const updatedMessages = [...activeChat.messages, userMsg];
@@ -244,13 +244,13 @@ function App() {
       prev.map((s) =>
         s.id === activeId
           ? {
-            ...s,
-            messages: updatedMessages,
-            title:
-              s.title === "New Session"
-                ? `${input.slice(0, 25) || "Image Message"}...`
-                : s.title,
-          }
+              ...s,
+              messages: updatedMessages,
+              title:
+                s.title === "New Session"
+                  ? `${input.slice(0, 25) || "Image Message"}...`
+                  : s.title,
+            }
           : s
       )
     );
@@ -265,9 +265,7 @@ function App() {
       );
       setSessions((prev) =>
         prev.map((s) =>
-          s.id === activeId
-            ? { ...s, messages: [...updatedMessages, data] }
-            : s
+          s.id === activeId ? { ...s, messages: [...updatedMessages, data] } : s
         )
       );
     } catch (err) {
@@ -276,12 +274,12 @@ function App() {
         prev.map((s) =>
           s.id === activeId
             ? {
-              ...s,
-              messages: [
-                ...updatedMessages,
-                { role: "assistant", content: "Error processing request." },
-              ],
-            }
+                ...s,
+                messages: [
+                  ...updatedMessages,
+                  { role: "assistant", content: "Error processing request." },
+                ],
+              }
             : s
         )
       );
@@ -306,16 +304,16 @@ function App() {
           prev.map((s) =>
             s.id === activeId
               ? {
-                ...s,
-                messages: [
-                  ...s.messages,
-                  {
-                    role: "assistant",
-                    summary: "🚫 Access Denied Command Blocked",
-                    content: fixRes.reason,
-                  },
-                ],
-              }
+                  ...s,
+                  messages: [
+                    ...s.messages,
+                    {
+                      role: "assistant",
+                      summary: "Access Denied Command Blocked",
+                      content: fixRes.reason,
+                    },
+                  ],
+                }
               : s
           )
         );
@@ -326,9 +324,7 @@ function App() {
 
       setSessions((prev) =>
         prev.map((s) =>
-          s.id === activeId
-            ? { ...s, messages: [...s.messages, fixRes] }
-            : s
+          s.id === activeId ? { ...s, messages: [...s.messages, fixRes] } : s
         )
       );
     } catch (e) {
@@ -337,12 +333,12 @@ function App() {
         prev.map((s) =>
           s.id === activeId
             ? {
-              ...s,
-              messages: [
-                ...s.messages,
-                { role: "assistant", content: "Autofix failed. Please try again." },
-              ],
-            }
+                ...s,
+                messages: [
+                  ...s.messages,
+                  { role: "assistant", content: "Autofix failed. Please try again." },
+                ],
+              }
             : s
         )
       );
@@ -373,9 +369,7 @@ function App() {
       );
       setSessions((prev) =>
         prev.map((s) =>
-          s.id === activeId
-            ? { ...s, messages: [...updatedMessages, data] }
-            : s
+          s.id === activeId ? { ...s, messages: [...updatedMessages, data] } : s
         )
       );
     } catch (err) {
@@ -391,16 +385,16 @@ function App() {
   };
 
   const chatPage = !activeChat ? (
-    <div className="flex h-screen items-center justify-center bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-white text-slate-800 dark:bg-slate-950 dark:text-slate-100">
       <button
         onClick={createNewChat}
-        className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
+        className="rounded-lg border border-slate-300 bg-slate-50 px-4 py-2 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
       >
         Create first session
       </button>
     </div>
   ) : (
-    <div className="flex h-[100dvh] w-full max-w-full overflow-x-hidden flex-col md:flex-row bg-slate-950 text-slate-50">
+    <div className="flex min-h-[100dvh] w-full max-w-full flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50 lg:h-[100dvh] lg:flex-row">
       <Sidebar
         sessions={sessions}
         activeId={activeId}
@@ -418,7 +412,7 @@ function App() {
         handleFileUpload={handleFileUpload}
       />
 
-      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden bg-white dark:bg-slate-950">
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-slate-950">
         <Header
           activeChat={activeChat}
           isDarkMode={isDarkMode}
@@ -468,8 +462,26 @@ function App() {
       <DashboardPage
         onGetStarted={() => navigateTo("/signup")}
         onSignIn={() => navigateTo("/login")}
+        currentPath={currentPath}
+        navigateTo={navigateTo}
       />
     );
+  }
+
+  if (currentPath === "/product") {
+    return <ProductPage navigateTo={navigateTo} />;
+  }
+
+  if (currentPath === "/enterprise") {
+    return <EnterprisePage navigateTo={navigateTo} />;
+  }
+
+  if (currentPath === "/pricing") {
+    return <PricingPage navigateTo={navigateTo} />;
+  }
+
+  if (currentPath === "/resources") {
+    return <ResourcesPage navigateTo={navigateTo} />;
   }
 
   if (currentPath === "/login") {

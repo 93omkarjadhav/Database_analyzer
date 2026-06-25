@@ -1,12 +1,18 @@
 import React from "react";
 import {
-  BarChart, Bar,
-  LineChart, Line,
-  PieChart, Pie,
-  XAxis, YAxis,
-  Tooltip, CartesianGrid,
-  ResponsiveContainer, Legend,
-  Label
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  Legend,
+  Label,
 } from "recharts";
 
 function DataChart({ data, type }) {
@@ -15,7 +21,6 @@ function DataChart({ data, type }) {
   const keys = Object.keys(data[0]);
   if (keys.length < 2) return null;
 
-  // 🔥 Smart X-axis selection
   const preferredKeys = ["name", "category", "title", "city"];
 
   const xKey =
@@ -23,14 +28,10 @@ function DataChart({ data, type }) {
     keys.find((k) => isNaN(data[0][k])) ||
     keys[0];
 
-  // 🔥 Smart Y-axis selection
-  let yKey = keys.find((k) =>
-    data.some((row) => !isNaN(parseFloat(row[k])))
-  );
+  let yKey = keys.find((k) => data.some((row) => !isNaN(parseFloat(row[k]))));
 
   let finalData = data;
 
-  // ❌ If NO numeric column → auto count
   if (!yKey) {
     const countMap = {};
 
@@ -41,134 +42,79 @@ function DataChart({ data, type }) {
 
     finalData = Object.keys(countMap).map((k) => ({
       name: k,
-      count: countMap[k]
+      count: countMap[k],
     }));
 
     yKey = "count";
   } else {
-    // ✅ Clean numeric values
     finalData = data.map((row) => ({
       ...row,
-      [yKey]: Number(row[yKey]) || 0
+      [yKey]: Number(row[yKey]) || 0,
     }));
   }
 
-  // 🔥 Format axis labels nicely
   const formatLabel = (key) =>
-    key
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
+    key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
   const xLabel = formatLabel(xKey);
   const yLabel = formatLabel(yKey);
+  const axisStroke = "#64748b";
+  const labelFill = "#475569";
+  const gridStroke = "#cbd5e1";
 
-  // ======================
-  // 📊 BAR CHART
-  // ======================
   if (type === "bar") {
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={finalData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+        <BarChart data={finalData} margin={{ top: 12, right: 12, left: 0, bottom: 18 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
 
-          <XAxis dataKey={xKey} stroke="#94a3b8">
-            <Label
-              value={xLabel}
-              position="insideBottom"
-              offset={-5}
-              fill="#cbd5f5"
-            />
+          <XAxis dataKey={xKey} stroke={axisStroke} tick={{ fontSize: 12 }}>
+            <Label value={xLabel} position="insideBottom" offset={-5} fill={labelFill} />
           </XAxis>
 
-          <YAxis stroke="#94a3b8">
-            <Label
-              value={yLabel}
-              angle={-90}
-              position="insideLeft"
-              fill="#cbd5f5"
-            />
+          <YAxis stroke={axisStroke} tick={{ fontSize: 12 }}>
+            <Label value={yLabel} angle={-90} position="insideLeft" fill={labelFill} />
           </YAxis>
 
-          <Tooltip
-            formatter={(value) => value}
-            labelFormatter={(label) => `${xLabel}: ${label}`}
-          />
+          <Tooltip formatter={(value) => value} labelFormatter={(label) => `${xLabel}: ${label}`} />
+          <Legend wrapperStyle={{ fontSize: "12px" }} />
 
-          <Legend />
-
-          <Bar
-            dataKey={yKey}
-            fill="#6366f1"
-            radius={[6, 6, 0, 0]}
-          />
+          <Bar dataKey={yKey} fill="#6366f1" radius={[6, 6, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     );
   }
 
-  // ======================
-  // 📈 LINE CHART
-  // ======================
   if (type === "line") {
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={finalData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+        <LineChart data={finalData} margin={{ top: 12, right: 12, left: 0, bottom: 18 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
 
-          <XAxis dataKey={xKey} stroke="#94a3b8">
-            <Label
-              value={xLabel}
-              position="insideBottom"
-              offset={-5}
-              fill="#cbd5f5"
-            />
+          <XAxis dataKey={xKey} stroke={axisStroke} tick={{ fontSize: 12 }}>
+            <Label value={xLabel} position="insideBottom" offset={-5} fill={labelFill} />
           </XAxis>
 
-          <YAxis stroke="#94a3b8">
-            <Label
-              value={yLabel}
-              angle={-90}
-              position="insideLeft"
-              fill="#cbd5f5"
-            />
+          <YAxis stroke={axisStroke} tick={{ fontSize: 12 }}>
+            <Label value={yLabel} angle={-90} position="insideLeft" fill={labelFill} />
           </YAxis>
 
-          <Tooltip
-            formatter={(value) => value}
-            labelFormatter={(label) => `${xLabel}: ${label}`}
-          />
+          <Tooltip formatter={(value) => value} labelFormatter={(label) => `${xLabel}: ${label}`} />
+          <Legend wrapperStyle={{ fontSize: "12px" }} />
 
-          <Legend />
-
-          <Line
-            type="monotone"
-            dataKey={yKey}
-            stroke="#22c55e"
-            strokeWidth={3}
-            dot={{ r: 4 }}
-          />
+          <Line type="monotone" dataKey={yKey} stroke="#22c55e" strokeWidth={3} dot={{ r: 4 }} />
         </LineChart>
       </ResponsiveContainer>
     );
   }
 
-  // ======================
-  // 🥧 PIE CHART
-  // ======================
   if (type === "pie") {
     return (
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Tooltip />
-          <Legend />
-
-          <Pie
-            data={finalData}
-            dataKey={yKey}
-            nameKey={xKey}
-            fill="#f59e0b"
-            label
-          />
+          <Legend wrapperStyle={{ fontSize: "12px" }} />
+          <Pie data={finalData} dataKey={yKey} nameKey={xKey} fill="#f59e0b" label />
         </PieChart>
       </ResponsiveContainer>
     );

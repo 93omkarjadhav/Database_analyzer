@@ -1,7 +1,8 @@
 import React from "react";
 import { ArrowRight } from "lucide-react";
+import Navbar from "../components/Navbar";
 
-function DashboardPage({ onGetStarted, onSignIn }) {
+function DashboardPage({ onGetStarted, onSignIn, currentPath, navigateTo }) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#0b0906] text-stone-50">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,180,80,0.18),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.08),_transparent_32%),linear-gradient(180deg,_rgba(255,255,255,0.02),_transparent_25%)]" />
@@ -9,52 +10,7 @@ function DashboardPage({ onGetStarted, onSignIn }) {
       <div className="absolute -left-24 top-24 h-72 w-72 rounded-full bg-[#f8b35a]/20 blur-3xl" />
       <div className="absolute -right-16 bottom-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
 
-      <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
-        <button onClick={onGetStarted} className="flex items-center gap-3 text-left">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.08] text-[11px] font-black tracking-[0.28em] text-white shadow-lg shadow-black/20">
-            SA
-          </span>
-          <span>
-            <span className="block text-sm font-semibold tracking-[0.22em] uppercase text-white">
-              sql Agent
-            </span>
-            <span className="block text-xs text-stone-400">
-              Database intelligence dashboard
-            </span>
-          </span>
-        </button>
-
-        <nav className="hidden items-center gap-8 text-sm text-stone-300 lg:flex">
-          <a href="#product" className="transition-colors hover:text-white">
-            Product
-          </a>
-          <a href="#enterprise" className="transition-colors hover:text-white">
-            Enterprise
-          </a>
-          <a href="#pricing" className="transition-colors hover:text-white">
-            Pricing
-          </a>
-          <a href="#resources" className="transition-colors hover:text-white">
-            Resources
-          </a>
-        </nav>
-
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            onClick={onSignIn}
-            className="rounded-full px-4 py-2 text-sm font-medium text-stone-200 transition-colors hover:text-white"
-          >
-            Sign in
-          </button>
-          <button
-            onClick={onGetStarted}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white px-4 py-2 text-sm font-semibold text-black transition-transform hover:-translate-y-0.5"
-          >
-            Get started
-            <ArrowRight size={16} />
-          </button>
-        </div>
-      </header>
+      <Navbar currentPath={currentPath} navigateTo={navigateTo} />
 
       <main className="relative z-10 mx-auto grid w-full max-w-7xl gap-14 px-5 pb-16 pt-12 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:px-10 lg:pb-24 lg:pt-20">
         <section className="flex flex-col justify-center">

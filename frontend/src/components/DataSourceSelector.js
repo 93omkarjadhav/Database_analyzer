@@ -17,7 +17,7 @@ function DataSourceSelector({ activeChat, updateSource }) {
       <div className="mb-2 flex items-center text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
         <Database className="mr-1 h-3 w-3" /> Data Source
       </div>
-      <div className="space-y-1">
+      <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-1">
         {DATA_SOURCES.map((src) => (
           <label
             key={src}
@@ -29,7 +29,7 @@ function DataSourceSelector({ activeChat, updateSource }) {
               onChange={() => updateSource(src)}
               className="mr-2 h-3 w-3 accent-rose-500"
             />
-            <span>{src}</span>
+            <span className="truncate">{src}</span>
           </label>
         ))}
       </div>

@@ -19,7 +19,7 @@ function MessageList({
   onAutofix,
 }) {
   return (
-    <div className="min-h-0 min-w-0 flex-1 space-y-6 overflow-auto overflow-x-hidden px-3 md:px-6 py-4 pb-36 md:pb-32 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+    <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-auto overflow-x-hidden px-3 py-4 pb-32 sm:space-y-6 md:px-6 md:pb-32 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
       {messages.map((m, i) => (
         <ChatMessage
           key={i}
@@ -42,7 +42,7 @@ function MessageList({
       ))}
       {loading && (
         <div className="animate-pulse text-xs font-medium text-rose-400">
-          Agent is Analyzing the data...
+          Agent is analyzing the data...
         </div>
       )}
     </div>

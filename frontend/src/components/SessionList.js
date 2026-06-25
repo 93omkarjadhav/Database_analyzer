@@ -17,7 +17,7 @@ function SessionList({
     <>
       <button
         onClick={createNewChat}
-        className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
+        className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
       >
         <Plus className="h-4 w-4" /> New Chat
       </button>
@@ -26,10 +26,11 @@ function SessionList({
         {sessions.map((s) => (
           <div
             key={s.id}
-            className={`group flex items-center gap-2 rounded-md px-2 py-2 text-xs ${activeId === s.id
-                ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-50"
-                : "cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/70"
-              }`}
+            className={`group flex items-center gap-2 rounded-md px-2 py-2 text-xs ${
+              activeId === s.id
+                ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-50"
+                : "cursor-pointer text-slate-600 hover:bg-slate-100/70 dark:text-slate-300 dark:hover:bg-slate-800/70"
+            }`}
           >
             {editingId === s.id ? (
               <input
@@ -38,7 +39,7 @@ function SessionList({
                 onChange={(e) => setEditingTitle(e.target.value)}
                 onBlur={() => renameSession(s.id)}
                 onKeyDown={(e) => e.key === "Enter" && renameSession(s.id)}
-                className="flex-1 rounded bg-slate-200 dark:bg-slate-700 px-2 py-1 text-xs outline-none"
+                className="flex-1 rounded bg-slate-200 px-2 py-1 text-xs outline-none dark:bg-slate-700"
               />
             ) : (
               <button
@@ -53,13 +54,13 @@ function SessionList({
                 setEditingId(s.id);
                 setEditingTitle(s.title);
               }}
-              className="opacity-0 transition group-hover:opacity-100"
+              className="opacity-100 transition md:opacity-0 md:group-hover:opacity-100"
             >
               <Pencil className="h-3 w-3 text-blue-400 hover:text-blue-300" />
             </button>
             <button
               onClick={() => deleteSession(s.id)}
-              className="opacity-0 transition group-hover:opacity-100"
+              className="opacity-100 transition md:opacity-0 md:group-hover:opacity-100"
             >
               <Trash2 className="h-3 w-3 text-rose-400 hover:text-rose-300" />
             </button>
