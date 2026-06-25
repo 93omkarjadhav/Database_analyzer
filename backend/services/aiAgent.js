@@ -22,6 +22,75 @@ async function getMySqlSchemaString(mysqlConn) {
     .join("; ");
 }
 
+const DATABASE_INTENT_PATTERNS = [
+  /\bselect\b/i,
+  /\binsert\b/i,
+  /\bupdate\b/i,
+  /\bdelete\b/i,
+  /\bcreate\b/i,
+  /\balter\b/i,
+  /\bdrop\b/i,
+  /\btable\b/i,
+  /\bcolumn\b/i,
+  /\bschema\b/i,
+  /\bdatabase\b/i,
+  /\bquery\b/i,
+  /\bmysql\b/i,
+  /\bpostgres(?:ql)?\b/i,
+  /\bmongodb\b/i,
+  /\bsqlite\b/i,
+  /\bbigquery\b/i,
+  /\bcsv\b/i,
+  /\bupload\b/i,
+  /\bfile\b/i,
+  /\brow(?:s)?\b/i,
+  /\brecord(?:s)?\b/i,
+  /\bcount\b/i,
+  /\bgroup by\b/i,
+  /\border by\b/i,
+  /\bwhere\b/i,
+  /\bjoin\b/i,
+  /\baggregate\b/i,
+  /\bcollection\b/i,
+  /\bvisuali[sz]e\b/i,
+  /\bchart\b/i,
+  /\bgraph\b/i,
+  /\bplot\b/i,
+  /\bfirst\b.*\b(row|rows|record|records|entry|entries)\b/i,
+  /\blast\b.*\b(row|rows|record|records|entry|entries)\b/i,
+  /\bshow\b.*\b(from|table|database|rows|records)\b/i,
+  /\bfind\b.*\b(from|in|table|database|rows|records)\b/i,
+];
+
+function shouldUseGeneralAssistant(prompt, source, filePath) {
+  const normalizedPrompt = String(prompt || "").trim();
+  if (!normalizedPrompt) return true;
+  if (source === "Upload File" && filePath) return false;
+
+  return !DATABASE_INTENT_PATTERNS.some((pattern) => pattern.test(normalizedPrompt));
+}
+
+async function getGeneralAssistantReply(llm, prompt) {
+  const response = await llm.invoke(`You are a helpful assistant inside a database analysis app.
+The user has sent a general prompt that does not require querying a database.
+Respond naturally and helpfully in 2-4 concise sentences.
+User message: ${prompt}`);
+
+  const content = String(response.content || "I can help with that.").trim();
+
+  return {
+    role: "assistant",
+    content,
+    summary: content,
+    query: null,
+    dataframe: null,
+    insights: null,
+    visualize: false,
+    visualizeOnly: false,
+    chart: null,
+  };
+}
+
 async function autofixMySqlSql({ llm, mysqlConn, sql, errorMessage }) {
   const FORBIDDEN = /DROP\s|DELETE\s|TRUNCATE\s|ALTER\s+TABLE.*RENAME|ALTER\s+TABLE.*DROP/i;
   if (sql.includes("FORBIDDEN_ACTION") || FORBIDDEN.test(sql)) {
@@ -115,6 +184,10 @@ if (
     modelName: "gpt-4o-mini",
     temperature: 0,
   });
+
+  if (shouldUseGeneralAssistant(prompt, source, filePath)) {
+    return getGeneralAssistantReply(llm, prompt);
+  }
 
 const mysqlConn = getMysqlConn();
   const pgPool = getPgPool();
@@ -715,3 +788,6 @@ return {
 };
 
 module.exports = { getAiResponse, autofixMySqlSql };
+
+
+
