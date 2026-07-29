@@ -139,7 +139,7 @@ let lastDataFrame = null;
 
 const getAiResponse = async (prompt, source, filePath) => {
 
-  const lowerPrompt = prompt.toLowerCase();
+  const lowerPrompt = (prompt || "").toLowerCase();
 
 let chartType = null;
 let visualize = false;
