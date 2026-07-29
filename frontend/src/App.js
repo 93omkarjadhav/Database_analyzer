@@ -11,7 +11,8 @@ import ProductPage from "./pages/ProductPage";
 import EnterprisePage from "./pages/EnterprisePage";
 import PricingPage from "./pages/PricingPage";
 import ResourcesPage from "./pages/ResourcesPage";
-import { uploadFile, sendChatMessage, autofixMySql } from "./utils/apiUtils";
+import SettingsPage from "./pages/SettingsPage";
+import { uploadFile, sendChatMessage, autofixMySql, updateProfile } from "./utils/apiUtils";
 import { exportCSV, exportExcel, exportJSON, exportText } from "./utils/exportUtils";
 
 function App() {
@@ -19,8 +20,11 @@ function App() {
   const [currentPath, setCurrentPath] = useState(getCurrentPath);
   const hasAuthToken = Boolean(localStorage.getItem("token"));
 
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(localStorage.getItem("token")));
+  const [user, setUser] = useState(() => {
+    const storedUser = localStorage.getItem("user");
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
 
   const [sessions, setSessions] = useState([]);
   const [activeId, setActiveId] = useState(null);
@@ -53,21 +57,22 @@ function App() {
   const handleLogin = (userData) => {
     setIsAuthenticated(true);
     setUser(userData);
+    localStorage.setItem("token", userData.token);
+    localStorage.setItem("user", JSON.stringify(userData));
     window.history.pushState({}, "", "/app");
     setCurrentPath("/app");
   };
 
   const handleSignup = (userData) => {
-    setIsAuthenticated(true);
-    setUser(userData);
-    window.history.pushState({}, "", "/app");
-    setCurrentPath("/app");
+    window.history.pushState({}, "", "/login");
+    setCurrentPath("/login");
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
     setUser(null);
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     window.history.pushState({}, "", "/");
     setCurrentPath("/");
   };
@@ -91,7 +96,7 @@ function App() {
       return;
     }
 
-    if (!["/", "/login", "/signup", "/app", "/product", "/enterprise", "/pricing", "/resources"].includes(currentPath)) {
+    if (!["/", "/login", "/signup", "/app", "/product", "/enterprise", "/pricing", "/resources", "/settings"].includes(currentPath)) {
       window.history.replaceState({}, "", "/");
       setCurrentPath("/");
     }
@@ -504,6 +509,32 @@ function App() {
 
   if (currentPath === "/app") {
     return chatPage;
+  }
+
+  const handleProfileSave = async (updatedProfile) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error("Authentication token missing.");
+    }
+
+    const response = await updateProfile(updatedProfile, token);
+    const savedUser = response.user || {};
+
+    setUser(savedUser);
+    localStorage.setItem("user", JSON.stringify(savedUser));
+    return response;
+  };
+
+  if (currentPath === "/settings") {
+    return (
+      <SettingsPage
+        user={user}
+        onBack={() => navigateTo("/app")}
+        onSave={handleProfileSave}
+        isDarkMode={isDarkMode}
+        toggleTheme={toggleTheme}
+      />
+    );
   }
 
   return null;

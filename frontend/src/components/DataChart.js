@@ -2,6 +2,7 @@ import React from "react";
 import {
   BarChart,
   Bar,
+  Cell,
   LineChart,
   Line,
   PieChart,
@@ -62,6 +63,23 @@ function DataChart({ data, type }) {
   const labelFill = "#475569";
   const gridStroke = "#cbd5e1";
 
+  const palette = [
+    "#22c55e",
+    "#38bdf8",
+    "#f59e0b",
+    "#ef4444",
+    "#8b5cf6",
+    "#ec4899",
+    "#14b8a6",
+    "#f97316",
+    "#0ea5e9",
+    "#a855f7",
+  ];
+
+  const fillByIndex = (index) => palette[index % palette.length];
+
+  const getSliceColors = () => finalData.map((_, index) => fillByIndex(index));
+
   if (type === "bar") {
     return (
       <ResponsiveContainer width="100%" height="100%">
@@ -79,7 +97,11 @@ function DataChart({ data, type }) {
           <Tooltip formatter={(value) => value} labelFormatter={(label) => `${xLabel}: ${label}`} />
           <Legend wrapperStyle={{ fontSize: "12px" }} />
 
-          <Bar dataKey={yKey} fill="#6366f1" radius={[6, 6, 0, 0]} />
+          <Bar dataKey={yKey} radius={[6, 6, 0, 0]}>
+            {finalData.map((entry, index) => (
+              <Cell key={`bar-cell-${index}`} fill={fillByIndex(index)} />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     );
@@ -114,7 +136,11 @@ function DataChart({ data, type }) {
         <PieChart>
           <Tooltip />
           <Legend wrapperStyle={{ fontSize: "12px" }} />
-          <Pie data={finalData} dataKey={yKey} nameKey={xKey} fill="#f59e0b" label />
+          <Pie data={finalData} dataKey={yKey} nameKey={xKey} label>
+            {finalData.map((entry, index) => (
+              <Cell key={`slice-${index}`} fill={fillByIndex(index)} />
+            ))}
+          </Pie>
         </PieChart>
       </ResponsiveContainer>
     );

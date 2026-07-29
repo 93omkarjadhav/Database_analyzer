@@ -27,3 +27,12 @@ export const autofixMySql = async (sql, errorMessage) => {
   });
   return response.data;
 };
+
+export const updateProfile = async (profile, token) => {
+  const response = await axios.put(`${API_BASE}/api/auth/profile`, profile, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.data;
+};

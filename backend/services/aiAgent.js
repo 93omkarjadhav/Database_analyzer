@@ -92,11 +92,11 @@ User message: ${prompt}`);
 }
 
 async function autofixMySqlSql({ llm, mysqlConn, sql, errorMessage }) {
-  const FORBIDDEN = /DROP\s|DELETE\s|TRUNCATE\s|ALTER\s+TABLE.*RENAME|ALTER\s+TABLE.*DROP/i;
+  const FORBIDDEN = /DROP\s|DELETE\s|TRUNCATE\s|UPDATE\s|ALTER\s+TABLE.*RENAME|ALTER\s+TABLE.*DROP|ALTER\s/i;
   if (sql.includes("FORBIDDEN_ACTION") || FORBIDDEN.test(sql)) {
     return {
       blocked: true,
-      reason: "🚫 Access Denied: Destructive operations like DROP, DELETE, TRUNCATE, or table renaming are prohibited for security and data integrity reasons.",
+      reason: "🚫 Access Denied: UPDATE, DELETE, and ALTER queries are prohibited for MySQL users.",
     };
   }
 
@@ -145,17 +145,6 @@ let chartType = null;
 let visualize = false;
 let visualizeOnly = false;
 
-// 🔥 Handle "visualize previous data"
-if (visualizeOnly && lastDataFrame) {
-  return {
-    role: "assistant",
-    dataframe: lastDataFrame,
-    visualize: true,
-    visualizeOnly: true,
-    chart: chartType || "bar"
-  };
-}
-
 if (
   lowerPrompt.includes("chart") ||
   lowerPrompt.includes("graph") ||
@@ -177,6 +166,19 @@ if (
   else if (lowerPrompt.includes("pie")) chartType = "pie";
 }
 
+// 🔥 Handle "visualize previous data"
+if (visualizeOnly && lastDataFrame) {
+  return {
+    role: "assistant",
+    content: "Visualizing the previous filtered result set.",
+    summary: "Visualized the previous query result.",
+    dataframe: lastDataFrame,
+    visualize: true,
+    visualizeOnly: true,
+    chart: chartType || "bar"
+  };
+}
+
 
 
   const llm = new ChatOpenAI({
@@ -195,10 +197,11 @@ const mysqlConn = getMysqlConn();
   const bigqueryClient = getBigQuery();
   // --- 1. MySQL Logic: realtime CREATE/INSERT/UPDATE/SELECT, block DROP/DELETE ---
   if (source === "MySQL Database" && mysqlConn) {
-    const FORBIDDEN = /DROP\s|DELETE\s|TRUNCATE\s|ALTER\s+TABLE.*RENAME|ALTER\s+TABLE.*DROP/i;
+    const FORBIDDEN = /DROP\s|DELETE\s|TRUNCATE\s|UPDATE\s|ALTER\s+TABLE.*RENAME|ALTER\s+TABLE.*DROP|ALTER\s/i;
+    const FORBIDDEN_EXECUTE = /^\s*(UPDATE|DELETE|ALTER)\b/i;
 
-    // Check prompt for destructive intent
-    const destructivePrompt = /drop.*table|delete.*table|truncate.*table|remove.*table|destroy.*table|rename.*table/i.test(prompt.toLowerCase());
+    // Check prompt for destructive intent when it explicitly mentions SQL modification commands
+    const destructivePrompt = /\b(?:drop|delete|truncate|remove|destroy|rename|update|alter)\b/i.test(prompt.toLowerCase());
 
     const isLikelyRawSql = (text) => {
       const t = text.trim().toUpperCase();
@@ -236,10 +239,10 @@ const mysqlConn = getMysqlConn();
       sql = sqlRes.content.replace(/```sql|```/g, "").trim();
     }
 
-    if (destructivePrompt || sql.includes("FORBIDDEN_ACTION") || FORBIDDEN.test(sql)) {
+    if (destructivePrompt || sql.includes("FORBIDDEN_ACTION") || FORBIDDEN.test(sql) || FORBIDDEN_EXECUTE.test(sql)) {
      return {
   role: "assistant",
-  content: "🚫 Access Denied: Destructive operations like DROP, DELETE, TRUNCATE, or table renaming are prohibited for security and data integrity reasons.",
+  content: "🚫 Access Denied: UPDATE, DELETE, and ALTER queries are prohibited for MySQL users.",
   summary: "🚫 Access Denied Command Blocked",
   query: null,
   dataframe: null,
@@ -254,6 +257,7 @@ const mysqlConn = getMysqlConn();
       const isSelect = /^\s*SELECT\s/i.test(sql);
       if (isSelect) {
         const [data] = await mysqlConn.query(sql);
+        lastDataFrame = data;
         const summary = `Executed query on MySQL. ${data.length} record(s) retrieved.`;
         const insights =
           data.length > 0
@@ -266,6 +270,9 @@ const mysqlConn = getMysqlConn();
           query: sql,
           dataframe: data,
           insights,
+          visualize: visualize,
+          visualizeOnly: visualizeOnly,
+          chart: chartType,
         };
       }
       await mysqlConn.query(sql);
@@ -282,6 +289,9 @@ const mysqlConn = getMysqlConn();
         query: sql,
         dataframe: [],
         insights,
+        visualize: false,
+        visualizeOnly: false,
+        chart: null,
       };
     } catch (err) {
       return {
@@ -292,6 +302,9 @@ const mysqlConn = getMysqlConn();
         error: err.message,
         dataframe: null,
         insights: null,
+        visualize: visualize,
+        visualizeOnly: visualizeOnly,
+        chart: chartType,
       };
     }
   }
@@ -454,6 +467,9 @@ Valid example:
       return {
         role: "assistant",
         content: `Failed to parse MongoDB JSON description from the model. Raw output was:\n\n${res.content}`,
+        visualize: false,
+        visualizeOnly: false,
+        chart: null,
       };
     }
 
@@ -661,6 +677,9 @@ resolve({
       role: "assistant",
       content:
         "Oracle support is not wired yet in this Node backend. Please use MySQL, PostgreSQL, MongoDB, or Upload File for now.",
+      visualize: false,
+      visualizeOnly: false,
+      chart: null,
     };
   }
   if (source === "SQLite") {
@@ -778,6 +797,9 @@ return {
           summary: `**BigQuery** error: ${err.message}`,
           query: sql,
           dataframe: null,
+          visualize: false,
+          visualizeOnly: false,
+          chart: null,
         };
     }
 }
