@@ -309,122 +309,20 @@ const mysqlConn = getMysqlConn();
     }
   }
 
-  // --- 2. PostgreSQL Logic (with schema + auto-fix) ---
-if (source === "PostgreSQL" || source === "PostgreSQL (Local Agent)") {
-
-  if (!pgPool) {
-    return { role: "assistant", content: "PostgreSQL pool not initialized." };
+  // --- 2. PostgreSQL Logic (temporarily disabled) ---
+  if (source === "PostgreSQL" || source === "PostgreSQL (Local Agent)") {
+    return {
+      role: "assistant",
+      content: "PostgreSQL support is temporarily disabled while database credentials are being fixed. Please use MySQL, MongoDB, SQLite, or file upload instead.",
+      summary: "PostgreSQL disabled.",
+      query: null,
+      dataframe: null,
+      insights: null,
+      visualize: false,
+      visualizeOnly: false,
+      chart: null,
+    };
   }
-
-  // -----------------------------
-  // GET DATABASE SCHEMA
-  // -----------------------------
-  const schemaRes = await pgPool.query(`
-    SELECT table_name, column_name, data_type 
-    FROM information_schema.columns 
-    WHERE table_schema = 'public'
-    ORDER BY table_name, ordinal_position
-  `);
-
-  const schemaByTable = {};
-
-  for (const r of schemaRes.rows) {
-    const t = r.table_name;
-    if (!schemaByTable[t]) schemaByTable[t] = [];
-    schemaByTable[t].push(`${r.column_name} (${r.data_type})`);
-  }
-
-  const schemaStr = Object.entries(schemaByTable)
-    .map(([t, cols]) => `${t}(${cols.join(", ")})`)
-    .join("; ");
-
-  // -----------------------------
-  // AI SQL GENERATION
-  // -----------------------------
-  const sqlRes = await llm.invoke(`
-You are a PostgreSQL database expert.
-
-DATABASE SCHEMA:
-${schemaStr}
-
-USER QUESTION:
-"${prompt}"
-
-INSTRUCTIONS:
-- Generate a valid PostgreSQL SQL query.
-- Use ONLY the tables and columns provided in the schema.
-- Always include ORDER BY when selecting rows.
-- If the user asks for "last records", use ORDER BY id DESC.
-- If the user asks for "first records", use ORDER BY id ASC.
-- If the user asks for counts, use COUNT().
-- If the user asks for grouping or aggregations, use GROUP BY.
-- Always include LIMIT 50 for safety unless the user specifies a limit.
-- Return ONLY the SQL query.
-- Do NOT include explanation.
-
-Example:
-User: give me last 5 records
-SQL:
-SELECT * FROM users ORDER BY id DESC LIMIT 5;
-`);
-
-let sql = sqlRes.content
-  .replace(/```sql|```/gi, "")
-  .replace(/SQL:/gi, "")
-  .replace(/Here is the SQL query:/gi, "")
-  .trim();
-
-// ✅ Extract only SELECT query
-const match = sql.match(/select[\s\S]*/i);
-
-if (match) {
-  sql = match[0];
-}
-
-  // -----------------------------
-  // EXECUTE SQL
-  // -----------------------------
-  const res = await pgPool.query(sql);
-
-  // -----------------------------
-  // GENERATE SUMMARY
-  // -----------------------------
-  const summaryRes = await llm.invoke(`
-User question: "${prompt}"
-
-SQL Query executed:
-${sql}
-
-Number of rows returned:
-${res.rows.length}
-
-Write a short 1-2 line summary explaining the result.
-`);
-
-  const summary = summaryRes.content;
-
-  // -----------------------------
-  // INSIGHTS
-  // -----------------------------
-  const insights =
-    res.rows.length > 0
-      ? `There are ${res.rows.length} records returned from the database.`
-      : "No matching records were found in the database.";
-
- // ✅ store last result
-lastDataFrame = res.rows;
-
-return {
-  role: "assistant",
-  summary: summary,
-  query: sql,
-  dataframe: res.rows,
-  insights: insights,
-  visualize: visualize,
-  visualizeOnly: visualizeOnly,
-  chart: chartType
-};
-}
 
   // --- 3. MongoDB Logic (Theory + JSON + table) ---
   if (source === "MongoDB") {

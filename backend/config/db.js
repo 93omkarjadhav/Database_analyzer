@@ -1,4 +1,4 @@
-const { Pool } = require('pg');
+// const { Pool } = require('pg');
 const mysql = require('mysql2/promise');
 const mongoose = require('mongoose');
 const sqlite3 = require('sqlite3').verbose();
@@ -19,23 +19,24 @@ const connectDatabases = async () => {
         });
         console.log("✅ MySQL (Workbench) Connected");
 
-        // 2. PostgreSQL (Aiven Cloud)
-        pgPool = new Pool({
-    host: process.env.PGHOST,
-    database: process.env.PGDATABASE,
-    user: process.env.PGUSER,
-    password: process.env.PGPASSWORD,
-    ssl: {
-        rejectUnauthorized: false
-    }
-});
-     sqliteDb = new sqlite3.Database('./local_store.db', (err) => {
+        // 2. PostgreSQL (Aiven Cloud) - temporarily disabled
+        // pgPool = new Pool({
+        //     host: process.env.PGHOST,
+        //     database: process.env.PGDATABASE,
+        //     user: process.env.PGUSER,
+        //     password: process.env.PGPASSWORD,
+        //     ssl: {
+        //         rejectUnauthorized: false
+        //     }
+        // });
+        sqliteDb = new sqlite3.Database('./local_store.db', (err) => {
             if (err) console.error("❌ SQLite Error:", err);
             else console.log("✅ SQLite (Local File) Connected");
         });
         //console.log("✅ PostgreSQL Connected");
- await pgPool.query("SELECT NOW()");
-console.log("Neon connection working properly");
+        // await pgPool.query("SELECT NOW()");
+        // console.log("Neon connection working properly");
+        
         // 3. MongoDB (Chat History & Agent)
         await mongoose.connect(process.env.MONGO_URI, {
             dbName: process.env.MONGO_DB_NAME || 'sql_agent',
