@@ -32,10 +32,10 @@ services:
       - ./backend/.env
     environment:
       - PORT=5000
-      - MONGO_URI=mongodb+srv://jadhavomkar2608:PS6D7_ffWuvkaMC@cluster0.gvkxs.mongodb.net/sql_agent?retryWrites=true&w=majority
+      - MONGO_URI=${MONGO_URI}
       - MYSQL_HOST=mysql_db
       - MYSQL_USER=root
-      - MYSQL_PASSWORD=root123
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - MYSQL_DB=retail_sales_db
     depends_on:
       - mongodb
