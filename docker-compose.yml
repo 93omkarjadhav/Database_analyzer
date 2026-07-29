@@ -1,0 +1,56 @@
+
+
+services:
+  # 1. MongoDB Service
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb_container
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  # 2. MySQL Service
+  mysql_db:
+    image: mysql:8.0
+    container_name: mysql_container
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: retail_sales_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  # 3. Express Backend Service
+  backend:
+    build: ./backend
+    container_name: express_backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - PORT=5000
+      - MONGO_URI=mongodb+srv://jadhavomkar2608:PS6D7_ffWuvkaMC@cluster0.gvkxs.mongodb.net/sql_agent?retryWrites=true&w=majority
+      - MYSQL_HOST=mysql_db
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=root123
+      - MYSQL_DB=retail_sales_db
+    depends_on:
+      - mongodb
+      - mysql_db
+
+  # 4. React Frontend Service
+  frontend:
+    build: ./frontend
+    container_name: react_frontend
+    ports:
+      - "3000:3000"
+    stdin_open: true # Keeps React dev server active
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
+  mysql_data:
