@@ -1,0 +1,16 @@
+PolicyID,PatientName,PolicyType,ClaimAmount,LastClaimDate,PolicyStatus
+POL2001,Arjun Mehta,Health,12500.5,2026-03-12,Active
+POL2002,Neha Sharma,Dental,3200.0,2026-08-20,Closed
+POL2003,Rahul Verma,Health,7800.75,2025-12-01,Active
+POL2004,Priya Nair,Vision,1500.0,2026-07-18,Active
+POL2005,Karan Patel,Health,22000.0,2026-01-10,Closed
+POL2006,Sneha Joshi,Dental,5400.25,2026-09-25,Active
+POL2007,Amit Kulkarni,Vision,2100.0,2026-05-14,Active
+POL2008,Divya Singh,Health,9800.0,2026-02-28,Closed
+POL2009,Rohit Gupta,Dental,4300.6,2026-06-30,Active
+POL2010,Anjali Desai,Health,16750.9,2026-04-05,Active
+POL2011,Vikram Rao,Vision,2750.0,2026-10-11,Active
+POL2012,Meera Iyer,Health,8900.0,2025-11-20,Closed
+POL2013,Sachin Jain,Dental,1500.0,2026-12-01,Active
+POL2014,Kavita Shah,Vision,3200.0,2026-03-22,Active
+POL2015,Nikhil Patil,Health,13400.0,2026-08-08,Active

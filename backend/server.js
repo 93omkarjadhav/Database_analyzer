@@ -18,7 +18,7 @@ app.use(express.json());
 
 // DB
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected"))
+  .then(() => {if(process.env.NODE_ENV !== 'test') console.log('MongoDB connected');})
   .catch(err => console.log(err));
 
 // Routes
