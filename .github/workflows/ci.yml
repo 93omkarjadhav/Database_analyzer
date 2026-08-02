@@ -41,20 +41,31 @@ jobs:
   backend-test:
     runs-on: ubuntu-latest
 
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
     env:
       NODE_ENV: test
       PORT: 5000
-      MONGO_URI: ${{ secrets.MONGO_URI }}
-      MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME || 'sql_agent' }}
-      MYSQL_HOST: ${{ secrets.MYSQL_HOST || 'localhost' }}
-      MYSQL_USER: ${{ secrets.MYSQL_USER || 'root' }}
-      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD || 'root123' }}
-      MYSQL_DB_NAME: ${{ secrets.MYSQL_DB_NAME || 'retail_sales_db' }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'dummy-openai-key-for-ci' }}
+      MONGO_URI: mongodb://127.0.0.1:27017/sql_agent
+      MONGO_DB_NAME: sql_agent
+      MYSQL_HOST: localhost
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root123
+      MYSQL_DB_NAME: retail_sales_db
+      OPENAI_API_KEY: dummy-openai-key-for-ci
       GOOGLE_APPLICATION_CREDENTIALS: ./google_key.json
-      BIGQUERY_PROJECT_ID: ${{ secrets.BIGQUERY_PROJECT_ID || 'retail-analytics-489405' }}
-      BIGQUERY_DATASET_ID: ${{ secrets.BIGQUERY_DATASET_ID || 'sales_data' }}
-      JWT_SECRET: ${{ secrets.JWT_SECRET || 'mysupersecretkey' }}
+      BIGQUERY_PROJECT_ID: test-project
+      BIGQUERY_DATASET_ID: sales_data
+      JWT_SECRET: test-secret
 
     steps:
       - name: Checkout repository
