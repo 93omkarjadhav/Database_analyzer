@@ -72,7 +72,7 @@ function LoginPage({ onLogin, onNavigateToSignup }) {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   className="w-full rounded-2xl border border-slate-800 bg-slate-950/50 py-3.5 pl-12 pr-12 text-white outline-none transition-all placeholder:text-slate-600 focus:border-rose-500/50 focus:ring-2 focus:ring-rose-500/20"
                   required
                 />
