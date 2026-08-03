@@ -1,4 +1,5 @@
 const request = require('supertest');
+const mongoose = require('mongoose');
 const app = require('../server'); 
 
 describe('Auth Endpoints API Tests', () => {
@@ -8,6 +9,11 @@ describe('Auth Endpoints API Tests', () => {
     email: `test_${Date.now()}@example.com`,
     password: 'password123'
   };
+
+  // Close open database connections after all tests in this file finish
+  afterAll(async () => {
+    await mongoose.connection.close();
+  });
 
   // --- SIGNUP TESTS ---
   describe('POST /api/auth/signup', () => {

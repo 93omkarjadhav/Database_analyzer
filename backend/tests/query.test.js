@@ -1,6 +1,11 @@
 const request = require('supertest');
 const app = require('../server');
+const mongoose = require('mongoose');
 
+// Close open database connections after all tests in this file finish
+afterAll(async () => {
+  await mongoose.connection.close();
+});
 describe('SQL Query & Autofix API Endpoints', () => {
 
   describe('POST /api/chat', () => {
