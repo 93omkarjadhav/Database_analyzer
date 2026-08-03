@@ -1,6 +1,52 @@
+const crypto = require("crypto");
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+
+const revokedTokens = new Map();
+
+const hashToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
+
+const isTokenRevoked = (token) => {
+  if (!token) return false;
+  const tokenHash = hashToken(token);
+  const revokedData = revokedTokens.get(tokenHash);
+
+  if (!revokedData) return false;
+
+  if (Date.now() >= revokedData.expiresAt) {
+    revokedTokens.delete(tokenHash);
+    return false;
+  }
+
+  return true;
+};
+
+const revokeToken = (token) => {
+  if (!token) return;
+
+  let expiresAt = Date.now() + 60 * 60 * 1000;
+
+  try {
+    const decodedToken = jwt.decode(token);
+    if (decodedToken && decodedToken.exp) {
+      expiresAt = decodedToken.exp * 1000;
+    }
+  } catch (error) {
+    // Ignore decode issues and fall back to default expiry.
+  }
+
+  revokedTokens.set(hashToken(token), { revokedAt: Date.now(), expiresAt });
+};
+
+const getBearerToken = (req) => {
+  const authHeader = req.headers.authorization || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return "";
+  }
+
+  return authHeader.replace("Bearer ", "").trim();
+};
 
 // ======================
 // 🔥 SIGNUP
@@ -141,5 +187,34 @@ exports.login = async (req, res) => {
 
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+// ======================
+// 🔥 LOGOUT
+// ======================
+exports.logout = async (req, res) => {
+  try {
+    const token = getBearerToken(req);
+
+    if (!token) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    try {
+      jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
+    if (isTokenRevoked(token)) {
+      return res.status(200).json({ message: "Logout successful" });
+    }
+
+    revokeToken(token);
+
+    return res.status(200).json({ message: "Logout successful" });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 };

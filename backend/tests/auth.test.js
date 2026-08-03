@@ -1,5 +1,6 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 const app = require('../server'); 
 
 describe('Auth Endpoints API Tests', () => {
@@ -58,6 +59,27 @@ describe('Auth Endpoints API Tests', () => {
         });
 
       expect(response.statusCode).toBeGreaterThanOrEqual(400);
+    });
+  });
+
+  describe('POST /api/auth/logout', () => {
+    it('should revoke a valid token and confirm logout', async () => {
+      const token = jwt.sign({ id: 'test-user-id' }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
+
+      const response = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body.message).toMatch(/logout successful/i);
+    });
+
+    it('should reject a missing or invalid token on logout', async () => {
+      const response = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', 'Bearer invalid-token');
+
+      expect(response.statusCode).toBe(401);
     });
   });
 });
